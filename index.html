@@ -50,7 +50,7 @@ const { useState, useEffect, useCallback, useRef } = React;
 //  Instructions : voir README-firebase.md dans ce même dossier.
 // ================================================================
 const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyBsH79Y5mJ-2fszESFb329sMjuuXGkk0_U",
+  apiKey:            "AIzaSyBsH79Y5mJ-2fszESFb329sMjuuXGkkO_U",
   authDomain:        "planio-v2-4bd57.firebaseapp.com",
   projectId:         "planio-v2-4bd57",
   storageBucket:     "planio-v2-4bd57.firebasestorage.app",
@@ -73,7 +73,7 @@ const TABS = [
   { id: "jeux",      label: "Jeux",      emoji: "🎮" },
 ];
 
-const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","🎸","🚀","🌈","🍕","🐉","⚡"];
+const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","��","🚀","🌈","🍕","🐉","⚡"];
 
 const BADGE_COLORS = [
   { bg: "#3d1830", text: "#fba8d0" },
@@ -744,7 +744,7 @@ function IdeesTab({ spaceId, user, members }) {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className={`font-semibold ${idee.done ? "line-through" : ""}`} style={{ color: idee.done ? "#6f5f8a" : "#f0eefa" }}>{idee.title}</span>
+                  <span className={`font-semibold ${idee.done ? "line-through" : ""}`} style={{ color: idee.done ? "#6b5f8a" : "#f0eefa" }}>{idee.title}</span>
                   <UserBadge uid={idee.by} members={members} />
                 </div>
                 {idee.desc && <p className="text-sm" style={{ color: "#9791b0" }}>{idee.desc}</p>}
