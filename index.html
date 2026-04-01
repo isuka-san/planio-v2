@@ -1645,16 +1645,26 @@ function FocusScreen({ spaceId, user }) {
     const docRef = db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr);
     const newVal = !habitChecks[habitId];
     await docRef.update({ [`habitChecks.${habitId}`]: newVal });
-    if (newVal) {
-      const hRef = db.collection(`spaces/${spaceId}/focusHabits`).doc(habitId);
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      const yd     = yesterday.toISOString().slice(0, 10);
-      const ydSnap = await db.collection(`spaces/${spaceId}/focusDays`).doc(yd).get();
-      const prevOk = ydSnap.exists && ydSnap.data().habitChecks?.[habitId];
-      const habit  = habits.find(h => h.id === habitId);
-      const newStreak = (habit?.lastCheckedDate === yd && prevOk) ? (habit?.streak || 0) + 1 : 1;
-      await hRef.update({ streak: newStreak, lastCheckedDate: todayStr });
+    const hRef = db.collection(`spaces/${spaceId}/focusHabits`).doc(habitId);
+    const habit = habits.find(h => h.id === habitId);
+    if (!newVal) {
+      // Décoche : annuler le streak du jour si on vient juste de le setter aujourd'hui
+      if (habit?.lastCheckedDate === todayStr) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yd = yesterday.toISOString().slice(0, 10);
+        const prevStreak = Math.max(0, (habit?.streak || 1) - 1);
+        await hRef.update({ streak: prevStreak, lastCheckedDate: prevStreak > 0 ? yd : null });
+      }
+      return;
     }
+    // Coche : calculer le streak
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yd     = yesterday.toISOString().slice(0, 10);
+    const ydSnap = await db.collection(`spaces/${spaceId}/focusDays`).doc(yd).get();
+    const prevOk = ydSnap.exists && ydSnap.data().habitChecks?.[habitId];
+    const newStreak = (habit?.lastCheckedDate === yd && prevOk) ? (habit?.streak || 0) + 1 : 1;
+    await hRef.update({ streak: newStreak, lastCheckedDate: todayStr });
   };
 
   const addHabit = async () => {
@@ -1759,7 +1769,7 @@ function FocusScreen({ spaceId, user }) {
                 <div className="flex-1 min-w-0">
                   <p className={`font-medium text-sm ${checked ? "line-through" : ""}`}
                     style={{ color: checked ? "var(--inactive)" : "var(--text)" }}>
-                    {h.emoji && !checked ? `${h.emoji} ` : ""}{h.name}
+                    {h.name}
                   </p>
                   {h.streak > 0 && (
                     <p className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
