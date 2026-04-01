@@ -174,6 +174,7 @@ const COWORK_TABS = [
 const SPACE_MODES = [
   { id: "social",    name: "Social",    emoji: "👥", desc: "Activités, films, musique, jeux…" },
   { id: "coworking", name: "Coworking", emoji: "💼", desc: "Tâches, projets, notes, liens…"  },
+  { id: "focus",     name: "Focus",     emoji: "🎯", desc: "Habitudes, tâches du jour, suivi perso…" },
 ];
 
 const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","🎸","🚀","🌈","🍕","🐉","⚡"];
@@ -1513,6 +1514,354 @@ function LiensTab({ spaceId, user, members }) {
 }
 
 // ================================================================
+//  FOCUS — graphique 7 jours (SVG pur)
+// ================================================================
+function HabitsGraph({ history }) {
+  const BAR_H = 80, BAR_W = 30, GAP = 8;
+  const totalW = 7 * (BAR_W + GAP) - GAP;
+  return (
+    <svg width="100%" viewBox={`0 0 ${totalW} ${BAR_H + 22}`} style={{ overflow: "visible" }}>
+      {history.map((d, i) => {
+        const pct   = d.total > 0 ? d.completed / d.total : 0;
+        const barH  = Math.max(3, Math.round(pct * BAR_H));
+        const x     = i * (BAR_W + GAP);
+        const color = pct >= 0.8 ? "#4ade80" : pct >= 0.5 ? "#fb923c" : pct > 0 ? "#f87171" : "var(--border)";
+        const isToday = i === 6;
+        return (
+          <g key={i}>
+            <rect x={x} y={0} width={BAR_W} height={BAR_H} rx={6} fill="var(--input-bg)" />
+            <rect x={x} y={BAR_H - barH} width={BAR_W} height={barH} rx={6} fill={color} fillOpacity={isToday ? 1 : 0.7} />
+            {pct > 0 && (
+              <text x={x + BAR_W / 2} y={BAR_H - barH - 5} textAnchor="middle" fill={color} fontSize={8} fontWeight="700">
+                {Math.round(pct * 100)}%
+              </text>
+            )}
+            <text x={x + BAR_W / 2} y={BAR_H + 14} textAnchor="middle" fill={isToday ? "var(--accent)" : "var(--secondary)"} fontSize={9} fontWeight={isToday ? "700" : "400"}>
+              {d.dayLabel}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ================================================================
+//  FOCUS SCREEN — habitudes & tâches du jour
+// ================================================================
+const FOCUS_QUOTES = [
+  "La discipline est le pont entre les objectifs et les accomplissements.",
+  "Chaque journée est une nouvelle chance de changer ta vie.",
+  "La constance crée la confiance.",
+  "Petit à petit, l'oiseau fait son nid.",
+  "Ce que tu fais aujourd'hui peut améliorer tous tes demains.",
+  "Les habitudes définissent qui tu es.",
+  "Un jour à la fois. Tous les jours.",
+  "Le succès est la somme de petits efforts répétés.",
+  "Prends soin de toi comme si tu étais ta propre priorité.",
+  "Chaque habitude tenue est une victoire silencieuse.",
+  "La régularité bat toujours le talent.",
+  "Commence où tu es. Utilise ce que tu as. Fais ce que tu peux.",
+  "Ta routine du matin définit ta journée.",
+  "Soit cohérent, pas parfait.",
+];
+
+const HABIT_EMOJIS = ["✅","💪","🏃","📚","💧","🧘","😴","🥗","🚴","🎯","✍️","🧹","🌿","🎵","🌅","🛁","🧠","❤️"];
+
+function FocusScreen({ spaceId, user }) {
+  const { showConfirm, ConfirmModal } = useConfirm();
+  const [habits,       setHabits]       = useState([]);
+  const [todayDoc,     setTodayDoc]     = useState(null);
+  const [history,      setHistory]      = useState([]);
+  const [showAddHabit, setShowAddHabit] = useState(false);
+  const [newHabitName, setNewHabitName] = useState("");
+  const [newHabitEmoji,setNewHabitEmoji]= useState("✅");
+  const [newTaskText,  setNewTaskText]  = useState("");
+  const [quote]        = useState(() => FOCUS_QUOTES[Math.floor(Math.random() * FOCUS_QUOTES.length)]);
+
+  const todayStr  = new Date().toISOString().slice(0, 10);
+  const dayNames  = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+
+  // ---- Habits ----
+  useEffect(() => {
+    if (!spaceId) return;
+    const unsub = db.collection(`spaces/${spaceId}/focusHabits`)
+      .orderBy("createdAt", "asc")
+      .onSnapshot(
+        snap => setHabits(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        err  => console.error("focusHabits:", err)
+      );
+    return unsub;
+  }, [spaceId]);
+
+  // ---- Today's doc ----
+  useEffect(() => {
+    if (!spaceId) return;
+    const docRef = db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr);
+    const unsub = docRef.onSnapshot(
+      snap => {
+        if (snap.exists) {
+          setTodayDoc({ id: snap.id, ...snap.data() });
+        } else {
+          docRef.set({ date: todayStr, habitChecks: {}, tasks: [], createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          setTodayDoc({ date: todayStr, habitChecks: {}, tasks: [] });
+        }
+      },
+      err => console.error("focusDays:", err)
+    );
+    return unsub;
+  }, [spaceId, todayStr]);
+
+  // ---- History (7 days) ----
+  useEffect(() => {
+    if (!spaceId) return;
+    const unsub = db.collection(`spaces/${spaceId}/focusDays`)
+      .orderBy("date", "desc").limit(7)
+      .onSnapshot(snap => {
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const result = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(); d.setDate(d.getDate() - i);
+          const ds    = d.toISOString().slice(0, 10);
+          const found = docs.find(x => x.date === ds);
+          const checks    = found?.habitChecks || {};
+          const completed = Object.values(checks).filter(Boolean).length;
+          result.push({ date: ds, dayLabel: dayNames[d.getDay()], completed, total: found ? habits.length : 0 });
+        }
+        setHistory(result);
+      }, err => console.error("history:", err));
+    return unsub;
+  }, [spaceId, habits.length]);
+
+  const habitChecks     = todayDoc?.habitChecks || {};
+  const tasks           = todayDoc?.tasks || [];
+  const completedHabits = habits.filter(h => !!habitChecks[h.id]).length;
+  const totalHabits     = habits.length;
+  const pct             = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
+  const pctColor        = pct >= 80 ? "#4ade80" : pct >= 50 ? "#fb923c" : "#f87171";
+  const mood            = pct >= 80 ? "🔥 En feu !" : pct >= 50 ? "💪 Continue !" : totalHabits > 0 ? "⚡ C'est parti !" : "";
+
+  const toggleHabit = async (habitId) => {
+    const docRef = db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr);
+    const newVal = !habitChecks[habitId];
+    await docRef.update({ [`habitChecks.${habitId}`]: newVal });
+    if (newVal) {
+      const hRef = db.collection(`spaces/${spaceId}/focusHabits`).doc(habitId);
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+      const yd     = yesterday.toISOString().slice(0, 10);
+      const ydSnap = await db.collection(`spaces/${spaceId}/focusDays`).doc(yd).get();
+      const prevOk = ydSnap.exists && ydSnap.data().habitChecks?.[habitId];
+      const habit  = habits.find(h => h.id === habitId);
+      const newStreak = (habit?.lastCheckedDate === yd && prevOk) ? (habit?.streak || 0) + 1 : 1;
+      await hRef.update({ streak: newStreak, lastCheckedDate: todayStr });
+    }
+  };
+
+  const addHabit = async () => {
+    if (!newHabitName.trim()) return;
+    await db.collection(`spaces/${spaceId}/focusHabits`).add({
+      name: newHabitName.trim(), emoji: newHabitEmoji,
+      streak: 0, lastCheckedDate: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    setNewHabitName(""); setNewHabitEmoji("✅"); setShowAddHabit(false);
+  };
+
+  const deleteHabit = async (habitId) => {
+    if (!await showConfirm("Supprimer cette habitude ?")) return;
+    await db.collection(`spaces/${spaceId}/focusHabits`).doc(habitId).delete();
+  };
+
+  const addTask = async () => {
+    if (!newTaskText.trim()) return;
+    const t = { id: Date.now().toString(), text: newTaskText.trim(), done: false };
+    await db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr).update({
+      tasks: firebase.firestore.FieldValue.arrayUnion(t)
+    });
+    setNewTaskText("");
+  };
+
+  const toggleTask = async (taskId) => {
+    const updated = tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t);
+    await db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr).update({ tasks: updated });
+  };
+
+  const deleteTask = async (taskId) => {
+    const updated = tasks.filter(t => t.id !== taskId);
+    await db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr).update({ tasks: updated });
+  };
+
+  return (
+    <div className="pb-10 px-4 pt-3 max-w-md mx-auto">
+      {/* Citation */}
+      <div className="mb-4 px-4 py-3 rounded-2xl text-center text-sm italic"
+        style={{ background: "var(--input-bg)", color: "var(--secondary)", border: "1px solid var(--border)" }}>
+        "{quote}"
+      </div>
+
+      {/* Bandeau résumé */}
+      <div className="card p-4 mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-4xl font-bold leading-none mb-1"
+            style={{ color: totalHabits > 0 ? pctColor : "var(--inactive)" }}>
+            {totalHabits > 0 ? `${pct}%` : "—"}
+          </p>
+          <p className="text-sm" style={{ color: "var(--secondary)" }}>
+            {completedHabits}/{totalHabits} habitudes
+          </p>
+        </div>
+        <div className="text-right">
+          {mood && <p className="text-sm font-semibold mb-1" style={{ color: "var(--accent)" }}>{mood}</p>}
+          <p className="text-xs" style={{ color: "var(--inactive)" }}>
+            {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          </p>
+        </div>
+      </div>
+
+      {/* Graphique 7 jours */}
+      {history.some(d => d.total > 0) && (
+        <div className="card p-4 mb-5">
+          <p className="text-xs uppercase tracking-wider mb-3 font-semibold" style={{ color: "var(--secondary)" }}>
+            7 derniers jours
+          </p>
+          <HabitsGraph history={history} />
+        </div>
+      )}
+
+      {/* Habitudes */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--secondary)" }}>Habitudes</p>
+        <button onClick={() => setShowAddHabit(true)}
+          className="text-xs px-3 py-1 rounded-full font-semibold"
+          style={{ background: "var(--input-bg)", color: "var(--accent)", border: "1px solid var(--border)" }}>
+          + Ajouter
+        </button>
+      </div>
+
+      {habits.length === 0 ? (
+        <div className="card p-6 mb-4 text-center" style={{ color: "var(--inactive)" }}>
+          <p className="text-3xl mb-2">🌱</p>
+          <p className="text-sm">Ajoute ta première habitude</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 mb-5">
+          {habits.map(h => {
+            const checked = !!habitChecks[h.id];
+            return (
+              <div key={h.id} className="card p-3 flex items-center gap-3">
+                <button onClick={() => toggleHabit(h.id)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 transition-all"
+                  style={checked
+                    ? { background: "#1a3a2a", color: "#4ade80", border: "2px solid #4ade80" }
+                    : { background: "var(--input-bg)", color: "var(--inactive)", border: "2px solid var(--border)" }}>
+                  {checked ? "✓" : h.emoji || "○"}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-medium text-sm ${checked ? "line-through" : ""}`}
+                    style={{ color: checked ? "var(--inactive)" : "var(--text)" }}>
+                    {h.emoji && !checked ? `${h.emoji} ` : ""}{h.name}
+                  </p>
+                  {h.streak > 0 && (
+                    <p className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
+                      🔥 {h.streak} jour{h.streak > 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+                <button onClick={() => deleteHabit(h.id)}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tâches du jour */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs uppercase tracking-wider font-semibold" style={{ color: "var(--secondary)" }}>Tâches du jour</p>
+        {tasks.length > 0 && (
+          <p className="text-xs" style={{ color: "var(--inactive)" }}>
+            {tasks.filter(t => t.done).length}/{tasks.length} faites
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-2 mb-3">
+        <input
+          value={newTaskText}
+          onChange={e => setNewTaskText(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && addTask()}
+          placeholder="Ajouter une tâche…"
+          className="flex-1 border rounded-xl p-3 text-sm"
+        />
+        <button onClick={addTask} disabled={!newTaskText.trim()}
+          className="gradient-bg text-white px-4 rounded-xl font-bold text-xl"
+          style={{ opacity: newTaskText.trim() ? 1 : 0.5 }}>+</button>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="card p-5 text-center mb-4" style={{ color: "var(--inactive)" }}>
+          <p className="text-sm">Rien de prévu pour aujourd'hui</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 mb-4">
+          {tasks.map(t => (
+            <div key={t.id} className="card p-3 flex items-center gap-3">
+              <button onClick={() => toggleTask(t.id)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 transition-all"
+                style={t.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                {t.done ? "✓" : "○"}
+              </button>
+              <p className={`flex-1 text-sm ${t.done ? "line-through" : ""}`}
+                style={{ color: t.done ? "var(--inactive)" : "var(--text)" }}>
+                {t.text}
+              </p>
+              <button onClick={() => deleteTask(t.id)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal ajout habitude */}
+      {showAddHabit && (
+        <div className="modal-overlay" onClick={() => setShowAddHabit(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg">Nouvelle habitude 🌱</h3>
+              <button onClick={() => setShowAddHabit(false)} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
+            </div>
+            <label className="block text-sm mb-1" style={{ color: "var(--secondary)" }}>Nom</label>
+            <input value={newHabitName} onChange={e => setNewHabitName(e.target.value)}
+              placeholder="Ex: Boire 2L d'eau"
+              className="w-full border rounded-xl p-3 text-sm mb-4" autoFocus
+              onKeyDown={e => e.key === "Enter" && addHabit()} />
+            <label className="block text-sm mb-2" style={{ color: "var(--secondary)" }}>Icône</label>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {HABIT_EMOJIS.map(em => (
+                <button key={em} type="button" onClick={() => setNewHabitEmoji(em)}
+                  className="w-10 h-10 rounded-full text-xl flex items-center justify-center transition-all"
+                  style={{ background: "var(--input-bg)", outline: newHabitEmoji === em ? "2px solid var(--accent)" : "none", transform: newHabitEmoji === em ? "scale(1.15)" : "scale(1)" }}>
+                  {em}
+                </button>
+              ))}
+            </div>
+            <button onClick={addHabit} disabled={!newHabitName.trim()}
+              className="w-full gradient-bg text-white font-bold py-3 rounded-xl"
+              style={{ opacity: newHabitName.trim() ? 1 : 0.5 }}>
+              Ajouter
+            </button>
+          </div>
+        </div>
+      )}
+
+      {ConfirmModal}
+    </div>
+  );
+}
+
+// ================================================================
 //  ESPACE — vue principale
 // ================================================================
 function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeChange }) {
@@ -1588,7 +1937,9 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
       </div>
 
       {/* Contenu selon onglet actif */}
-      {spaceMode === "coworking" ? (
+      {spaceMode === "focus" ? (
+        <FocusScreen spaceId={space.id} user={user} />
+      ) : spaceMode === "coworking" ? (
         <>
           {activeTab === "taches"  && <TachesTab  spaceId={space.id} user={user} members={members} />}
           {activeTab === "projets" && <ProjetsTab spaceId={space.id} user={user} members={members} />}
@@ -1605,18 +1956,20 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
         </>
       )}
 
-      {/* Barre de navigation en bas */}
-      <div className="bottom-nav">
-        <div className="flex">
-          {(spaceMode === "coworking" ? COWORK_TABS : TABS).map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
-              <span className="text-xl">{tab.emoji}</span>
-              <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
-              {activeTab === tab.id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />}
-            </button>
-          ))}
+      {/* Barre de navigation en bas (cachée en mode Focus) */}
+      {spaceMode !== "focus" && (
+        <div className="bottom-nav">
+          <div className="flex">
+            {(spaceMode === "coworking" ? COWORK_TABS : TABS).map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
+                <span className="text-xl">{tab.emoji}</span>
+                <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
+                {activeTab === tab.id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modal infos espace */}
       {showInfo && (
