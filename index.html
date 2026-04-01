@@ -536,7 +536,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
                 <div>
                   <p className="font-semibold">{s.name}</p>
                   <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
-                    {(s.members || []).map(m => m.emoji).join(" ")} · {(s.memberIds || []).length} membre{((s.memberIds || []).length > 1 ? "s" : ""}
+                    {(s.members || []).map(m => m.emoji).join(" ")} · {(s.memberIds || []).length} membre{(s.memberIds || []).length > 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
