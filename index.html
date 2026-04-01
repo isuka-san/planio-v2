@@ -19,6 +19,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
   <style>
     :root {
@@ -92,6 +93,41 @@ const FIREBASE_CONFIG = {
 if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db   = firebase.firestore();
+
+// ── FCM Push Notifications ──────────────────────────────────────
+// ⚠️  Remplis ta VAPID key : Firebase Console → Project Settings
+//     → Cloud Messaging → Web Push certificates → Generate/Copy key pair
+const VAPID_KEY = ""; // ← colle ta clé ici
+let messaging = null;
+try { if (typeof firebase.messaging === "function") messaging = firebase.messaging(); } catch(e) {}
+
+async function _saveFcmToken(uid) {
+  if (!messaging || !uid || !VAPID_KEY || Notification.permission !== "granted") return;
+  try {
+    const sw = await navigator.serviceWorker.register("/planio-v2/firebase-messaging-sw.js");
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: sw });
+    if (token) await db.collection("users").doc(uid).set({ fcmToken: token }, { merge: true });
+  } catch(e) { console.warn("FCM token:", e.message); }
+}
+
+async function askAndSavePush(uid) {
+  if (!("Notification" in window) || !VAPID_KEY) return;
+  if (Notification.permission === "granted") { _saveFcmToken(uid); return; }
+  if (Notification.permission === "denied")  return;
+  const p = await Notification.requestPermission();
+  if (p === "granted") _saveFcmToken(uid);
+}
+
+async function sendPingTo(spaceId, fromUser, fromUserData, target) {
+  await db.collection(`spaces/${spaceId}/pings`).add({
+    targetId:  target.uid,
+    targetName: target.name,
+    fromId:    fromUser.uid,
+    fromName:  fromUserData?.name  || fromUser.displayName || "Quelqu'un",
+    fromEmoji: fromUserData?.emoji || "🦖",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
 
 // ================================================================
 //  THÈMES
@@ -1518,10 +1554,12 @@ function LiensTab({ spaceId, user, members }) {
 //  COWORKING — Chat temps réel
 // ================================================================
 function ChatTab({ spaceId, user, userData, members }) {
-  const [messages, setMessages] = React.useState([]);
-  const [text, setText]         = React.useState("");
-  const [sending, setSending]   = React.useState(false);
-  const bottomRef               = React.useRef(null);
+  const [messages,      setMessages]      = React.useState([]);
+  const [text,          setText]          = React.useState("");
+  const [sending,       setSending]       = React.useState(false);
+  const [showPingModal, setShowPingModal] = React.useState(false);
+  const [pingSent,      setPingSent]      = React.useState(null);
+  const bottomRef = React.useRef(null);
   const path = spaceId ? `spaces/${spaceId}/chat` : null;
 
   React.useEffect(() => {
@@ -1562,6 +1600,15 @@ function ChatTab({ spaceId, user, userData, members }) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
+  const doPing = async (target) => {
+    setShowPingModal(false);
+    try {
+      await sendPingTo(spaceId, user, userData, target);
+      setPingSent(target.name);
+      setTimeout(() => setPingSent(null), 3000);
+    } catch(e) { console.error(e); }
+  };
+
   // Grouper par jour
   const grouped = messages.reduce((acc, msg) => {
     const day = msg.day || msg.createdAt?.toDate?.()?.toISOString?.()?.slice(0,10) || "?";
@@ -1580,9 +1627,20 @@ function ChatTab({ spaceId, user, userData, members }) {
   };
 
   const isMe = (msg) => msg.authorId === user.uid;
+  const others = (members || []).filter(m => m.uid !== user.uid);
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 130px)" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 130px)", position:"relative" }}>
+
+      {/* Toast ping envoyé */}
+      {pingSent && (
+        <div style={{ position:"absolute", top:"10px", left:"50%", transform:"translateX(-50%)",
+          background:"#22c55e", color:"white", borderRadius:"20px", padding:"8px 18px",
+          fontSize:"0.85rem", fontWeight:600, zIndex:300, boxShadow:"0 4px 14px rgba(0,0,0,0.35)",
+          whiteSpace:"nowrap", pointerEvents:"none" }}>
+          📣 Ping envoyé à {pingSent} !
+        </div>
+      )}
 
       {/* Liste des messages */}
       <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
@@ -1613,7 +1671,6 @@ function ChatTab({ spaceId, user, userData, members }) {
               return (
                 <div key={msg.id} style={{ display:"flex", flexDirection: me ? "row-reverse" : "row",
                   alignItems:"flex-end", gap:"8px", marginBottom:"5px" }}>
-                  {/* Avatar côté gauche (autres membres) */}
                   {!me && (
                     <div style={{ width:"32px", height:"32px", borderRadius:"50%", background:"var(--input-bg)",
                       display:"flex", alignItems:"center", justifyContent:"center",
@@ -1657,6 +1714,16 @@ function ChatTab({ spaceId, user, userData, members }) {
       <div style={{ borderTop:"1px solid var(--border)", padding:"10px 16px",
         paddingBottom:"calc(10px + env(safe-area-inset-bottom))", background:"var(--nav-bg)" }}>
         <div style={{ display:"flex", gap:"8px", alignItems:"flex-end" }}>
+          {/* Bouton Ping */}
+          {others.length > 0 && (
+            <button onClick={() => setShowPingModal(true)} title="Ping un membre"
+              style={{ width:"40px", height:"40px", borderRadius:"50%", flexShrink:0,
+                background:"var(--input-bg)", border:"1px solid var(--input-border)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:"1.1rem", cursor:"pointer" }}>
+              📣
+            </button>
+          )}
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
@@ -1683,6 +1750,39 @@ function ChatTab({ spaceId, user, userData, members }) {
           </button>
         </div>
       </div>
+
+      {/* Modal Ping */}
+      {showPingModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:250,
+          display:"flex", alignItems:"flex-end" }}
+          onClick={() => setShowPingModal(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:"var(--card)", borderRadius:"24px 24px 0 0",
+              borderTop:"1px solid var(--border)", width:"100%", maxHeight:"70vh", overflowY:"auto",
+              padding:"20px 20px", paddingBottom:"calc(20px + env(safe-area-inset-bottom))" }}>
+            <div style={{ width:"36px", height:"4px", background:"var(--border)",
+              borderRadius:"2px", margin:"0 auto 16px" }} />
+            <p style={{ fontWeight:700, fontSize:"1.05rem", marginBottom:"4px" }}>📣 Envoyer un ping</p>
+            <p style={{ color:"var(--secondary)", fontSize:"0.82rem", marginBottom:"16px", lineHeight:"1.5" }}>
+              La personne reçoit une notification pour venir voir le chat !
+            </p>
+            {others.map(m => (
+              <div key={m.uid} style={{ display:"flex", alignItems:"center", gap:"12px",
+                padding:"11px 0", borderBottom:"1px solid var(--border)" }}>
+                <span style={{ fontSize:"1.7rem" }}>{m.emoji}</span>
+                <span style={{ flex:1, fontWeight:500 }}>{m.name}</span>
+                <button onClick={() => doPing(m)}
+                  style={{ padding:"8px 16px", borderRadius:"20px", fontWeight:600,
+                    fontSize:"0.82rem", cursor:"pointer", border:"none",
+                    background:"linear-gradient(135deg, var(--grad1), var(--grad2))",
+                    color:"white" }}>
+                  Ping ! 🔔
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2246,6 +2346,7 @@ function App() {
       setUser(u);
       if (unsubUser) { unsubUser(); unsubUser = null; }
       if (u) {
+        askAndSavePush(u.uid);
         unsubUser = db.collection("users").doc(u.uid).onSnapshot(doc => {
           if (doc.exists) setUserData(doc.data());
         });
