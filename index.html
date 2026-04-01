@@ -114,7 +114,7 @@ function applyTheme(theme) {
   const r = document.documentElement;
   r.style.setProperty('--grad1',        theme.grad1);
   r.style.setProperty('--grad2',        theme.grad2);
-  r.style.setProperty('--accent',       theme.accent);
+  r.style.setProperty('--accent',     0 theme.accent);
   r.style.setProperty('--bg',           theme.bg);
   r.style.setProperty('--text',         theme.text);
   r.style.setProperty('--card',         theme.card);
@@ -138,6 +138,18 @@ const TABS = [
   { id: "films",     label: "Films",     emoji: "🎬" },
   { id: "musique",   label: "Musique",   emoji: "🎵" },
   { id: "jeux",      label: "Jeux",      emoji: "🎮" },
+];
+
+const COWORK_TABS = [
+  { id: "taches",  label: "Tâches",  emoji: "✅" },
+  { id: "projets", label: "Projets", emoji: "📁" },
+  { id: "notes",   label: "Notes",   emoji: "💬" },
+  { id: "liens",   label: "Liens",   emoji: "🔗" },
+];
+
+const SPACE_MODES = [
+  { id: "couple",    name: "Couple",    emoji: "💑", desc: "Activités, films, musique, jeux…" },
+  { id: "coworking", name: "Coworking", emoji: "💼", desc: "Tâches, projets, notes, liens…"  },
 ];
 
 const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","🎸","🚀","🌈","🍕","🐉","⚡"];
@@ -424,7 +436,7 @@ function SettingsModal({ onClose, user, currentThemeId, onThemeChange }) {
   );
 }
 
-// ================================================================
+// =============================================================
 //  ÉCRAN D'ACCUEIL — liste des espaces
 // ================================================================
 function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChange }) {
@@ -433,6 +445,8 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
   const [showJoin, setShowJoin]     = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [newName, setNewName]       = useState("");
+  const [spaceMode, setSpaceMode]   = useState(null);
+  const [createStep, setCreateStep] = useState("mode");
   const [code, setCode]             = useState("");
   const [err, setErr]               = useState("");
   const [busy, setBusy]             = useState(false);
@@ -451,16 +465,18 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
     if (!newName.trim()) return;
     setBusy(true);
     const inviteCode = genCode();
+    const mode = spaceMode || "couple";
     const ref = await db.collection("spaces").add({
       name:       newName.trim(),
       inviteCode,
+      mode,
       createdBy:  user.uid,
       memberIds:  [user.uid],
       members:    [myMember],
       createdAt:  firebase.firestore.FieldValue.serverTimestamp(),
     });
-    setBusy(false); setShowCreate(false); setNewName("");
-    onEnterSpace({ id: ref.id, name: newName.trim(), inviteCode, members: [myMember], memberIds: [user.uid] });
+    setBusy(false); setShowCreate(false); setNewName(""); setSpaceMode(null); setCreateStep("mode");
+    onEnterSpace({ id: ref.id, name: newName.trim(), inviteCode, mode, members: [myMember], memberIds: [user.uid] });
   };
 
   const joinSpace = async () => {
@@ -515,11 +531,14 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
         <div className="flex flex-col gap-3">
           {spaces.map(s => (
             <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center justify-between">
-              <div>
-                <p className="font-semibold">{s.name}</p>
-                <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
-                  {(s.members || []).map(m => m.emoji).join(" ")} · {(s.memberIds || []).length} membre{(s.memberIds || []).length > 1 ? "s" : ""}
-                </p>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji || "💑"}</span>
+                <div>
+                  <p className="font-semibold">{s.name}</p>
+                  <p className="e="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
+                    {(s.members || []).map(m => m.emoji).join(" ")} · {(s.memberIds || []).length} membre{(s.memberIds || []).length > 1 ? "s" : ""}
+                  </p>
+                </div>
               </div>
               <span className="text-xl" style={{ color: "var(--inactive)" }}>›</span>
             </button>
@@ -527,20 +546,49 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
         </div>
       )}
 
-      {/* Modal créer */}
+      {/* Modal créer — 2 étapes */}
       {showCreate && (
-        <div className="modal-overlay" onClick={() => setShowCreate(false)}>
+        <div className="modal-overlay" onClick={() => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-lg">Nouvel espace</h3>
-              <button onClick={() => setShowCreate(false)} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
+              <h3 className="font-bold text-lg">
+                {createStep === "mode" ? "Quel type d'espace ?" : "Nouvel espace"}
+              </h3>
+              <button onClick={() => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); }} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
             </div>
-            <label className="block text-xs uppercase tracking-wider mb-1" style={{ color: "var(--secondary)" }}>Nom de l'espace</label>
-            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Vacances, Coloc, Plannings…"
-              className="w-full border rounded-xl p-3 text-sm mb-4" autoFocus />
-            <button onClick={createSpace} disabled={busy || !newName.trim()} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || !newName.trim() ? 0.6 : 1 }}>
-              {busy ? "…" : "Créer"}
-            </button>
+
+            {createStep === "mode" ? (
+              <>
+                <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>Choisis un mode pour adapter l'interface.</p>
+                <div className="flex flex-col gap-3 mb-2">
+                  {SPACE_MODES.map(m => (
+                    <button key={m.id} onClick={() => { setSpaceMode(m.id); setCreateStep("name"); }}
+                      className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all"
+                      style={{ background: "var(--input-bg)", border: "2px solid var(--border)" }}>
+                      <span className="text-4xl">{m.emoji}</span>
+                      <div>
+                        <p className="font-bold text-base" style={{ color: "var(--text)" }}>{m.name}</p>
+                        <p className="text-sm" style={{ color: "var(--secondary)" }}>{m.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4 p-3 rounded-xl" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+                  <span className="text-2xl">{SPACE_MODES.find(m => m.id === spaceMode)?.emoji}</span>
+                  <span className="font-medium" style={{ color: "var(--secondary)" }}>{SPACE_MODES.find(m => m.id === spaceMode)?.name}</span>
+                  <button onClick={() => setCreateStep("mode")} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{ color: "var(--accent)", background: "transparent" }}>Changer</button>
+                </div>
+                <label className="block text-xs uppercase tracking-wider mb-1" style={{ color: "var(--secondary)" }}>Nom de l'espace</label>
+                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Vacances, Coloc, Planio…"
+                  className="w-full border rounded-xl p-3 text-sm mb-4" autoFocus />
+                <button onClick={createSpace} disabled={busy || !newName.trim()} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || !newName.trim() ? 0.6 : 1 }}>
+                  {busy ? "…" : "Créer l'espace"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -579,7 +627,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
 }
 
 // ================================================================
-//  ONGLETS CONTENU
+//  ONGLETS CONTENT
 // ================================================================
 
 // ---- Activités & Voyages ----
@@ -622,68 +670,71 @@ function ActivitesTab({ spaceId, user, members }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
-                    <UserBadge uid={item.by} members={members} />
-                  </div>
-                  {item.desc && <p className="text-sm mb-1" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
-                  {item.date && <p className="text-xs" style={{ color: "var(--grad1)" }}>📅 {new Date(item.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => toggle(item.id, item.done)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                    style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
-                    {item.done ? "✓" : "○"}
-                  </button>
-                  <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
-                </div>
-              </div>
-            </div>
-          ))
-        }
-      </div>
+                    <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" :      <button onClick={joinSpace} disabled={busy || code.trim().length < 6} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || code.trim().length < 6 ? 0.6 : 1 }}>
+              {busy ? "…" : "Rejoindre"}
+            </button>
+          </div>
+        </div>
+      )}
 
-      {modal && (
-        <AddModal
-          title={sub === "activites" ? "Nouvelle activité 🎯" : "Nouveau voyage ✈️"}
-          fields={[
-            { key: "title", label: "Titre",       required: true },
-            { key: "desc",  label: "Description", type: "textarea" },
-            { key: "date",  label: "Date prévue", type: "date" },
-          ]}
-          onClose={() => setModal(false)}
-          onSave={add}
+      {/* Modal paramètres */}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          user={user}
+          currentThemeId={currentThemeId}
+          onThemeChange={(t) => { onThemeChange(t); }}
         />
       )}
     </div>
   );
 }
 
-// ---- Films ----
-function FilmsTab({ spaceId, user, members }) {
-  const [modal, setModal]   = useState(false);
-  const [filter, setFilter] = useState("all");
-  const path  = spaceId ? `spaces/${spaceId}/films` : null;
-  const films = useCollection(path);
+// ================================================================
+//  ONGLETS CONTENT
+// ================================================================
 
-  const add    = (form) => db.collection(path).add({ title: form.title, genre: form.genre || "", desc: form.desc || "", by: user.uid, watched: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  const toggle = (id, watched) => db.collection(path).doc(id).update({ watched: !watched });
-  const del    = (id)          => db.collection(path).doc(id).delete();
+// ---- Activités & Voyages ----
+function ActivitesTab({ spaceId, user, members }) {
+  const [sub, setSub]     = useState("activites");
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
+  const items = useCollection(path);
 
-  const filtered = filter === "all" ? films : filter === "watched" ? films.filter(f => f.watched) : films.filter(f => !f.watched);
+  const add = (form) => db.collection(path).add({
+    title: form.title, desc: form.desc || "", date: form.date || "",
+    by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
+  const del    = (id)       => db.collection(path).doc(id).delete();
 
   return (
     <div className="pb-24">
-      <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Films 🎬</h2>
-        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
-          {films.filter(f => !f.watched).length} film{films.filter(f => !f.watched).length > 1 ? "s" : ""} à voir
-        </p>
+      <div className="gradient-bg p-6 pb-4">
+        <h2 className="text-white font-bold text-xl mb-4">Plans</h2>
+        <div className="flex rounded-xl p-1 gap-1" style={{ background: "rgba(0,0,0,0.2)" }}>
+          {[["activites","🎯 Activités"], ["voyages","✈️ Voyages"]].map(([t, lbl]) => (
+            <button key={t} onClick={() => setSub(t)} className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
+              style={sub === t ? { background: "white", color: "#be185d" } : { color: "white" }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="p-4">
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {[["all","Tous"],["unwatched","À voir"],["watched","Vus ✓"]].map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter {sub === "activites" ? "une activité" : "un voyage"}
+        </button>
+
+        {items.length === 0
+          ? <EmptyState emoji={sub === "activites" ? "🎯" : "✈️"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
+          : items.map(item => (
+            <div key={item.id} className="card p-4 mb-3" style={item.done ? { opacity: 0.45 } : {}}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" :       <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
           ))}
         </div>
         <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
@@ -935,10 +986,282 @@ function IdeesTab({ spaceId, user, members }) {
 }
 
 // ================================================================
+//  ONGLETS COWORKING
+// ================================================================
+
+// ---- Tâches ----
+function TachesTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const path  = spaceId ? `spaces/${spaceId}/taches` : null;
+  const items = useCollection(path);
+
+  const add    = (form) => db.collection(path).add({
+    title: form.title, desc: form.desc || "", priority: form.priority || "normal",
+    by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
+  const del    = (id)       => db.collection(path).doc(id).delete();
+
+  const filtered = filter === "all" ? items : filter === "done" ? items.filter(i => i.done) : items.filter(i => !i.done);
+  const priorityStyle = (p) => p === "urgent" ? { bg: "#3d1515", color: "#f87171" } : p === "bas" ? { bg: "#0b2e26", color: "#5eead4" } : { bg: "#2d1a0b", color: "#fcd34d" };
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Tâches ✅</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {items.filter(i => !i.done).length} tâche{items.filter(i => !i.done).length !== 1 ? "s" : ""} en cours
+        </p>
+      </div>
+      <div className="p-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {[["all","Toutes"],["todo","À faire"],["done","Faites ✓"]].map(([v,l]) => (
+            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
+          ))}
+        </div>
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter une tâche
+        </button>
+        {filtered.length === 0
+          ? <EmptyState emoji="✅" text="Aucune tâche ici !" />
+          : filtered.map(item => {
+              const ps = priorityStyle(item.priority);
+              return (
+                <div key={item.id} className="card p-4 mb-3" style={item.done ? { opacity: 0.45 } : {}}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
+                        <UserBadge uid={item.by} members={members} />
+                        {item.priority && item.priority !== "normal" && (
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: ps.bg, color: ps.color }}>{item.priority}</span>
+                        )}
+                      </div>
+                      {item.desc && <p className="text-sm" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => toggle(item.id, item.done)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                        style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                        {item.done ? "✓" : "○"}
+                      </button>
+                      <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouvelle tâche ✅"
+          fields={[
+            { key: "title",    label: "Titre",    required: true, placeholder: "Que faut-il faire ?" },
+            { key: "desc",     label: "Détails",  type: "textarea" },
+            { key: "priority", label: "Priorité", placeholder: "urgent / normal / bas" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Projets ----
+function ProjetsTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/projets` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, desc: form.desc || "", status: "actif",
+    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const cycleStatus = (id, status) => {
+    const next = status === "actif" ? "pause" : status === "pause" ? "terminé" : "actif";
+    db.collection(path).doc(id).update({ status: next });
+  };
+  const del = (id) => db.collection(path).doc(id).delete();
+
+  const statusStyle = (s) => s === "terminé" ? { bg: "#1a3a2a", color: "#4ade80" } : s === "pause" ? { bg: "#2d1a0b", color: "#fcd34d" } : { bg: "#1a2e40", color: "#60a5fa" };
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Projets 📁</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {items.filter(i => i.status === "actif").length} projet{items.filter(i => i.status === "actif").length !== 1 ? "s" : ""} actif{items.filter(i => i.status === "actif").length !== 1 ? "s" : ""}
+        </p>
+      </div>
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Nouveau projet
+        </button>
+        {items.length === 0
+          ? <EmptyState emoji="📁" text="Aucun projet pour l'instant" />
+          : items.map(item => {
+              const ss = statusStyle(item.status);
+              return (
+                <div key={item.id} className="card p-4 mb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                        <UserBadge uid={item.by} members={members} />
+                      </div>
+                      {item.desc && <p className="text-sm mb-2" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                      <button onClick={() => cycleStatus(item.id, item.status)} className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: ss.bg, color: ss.color }}>
+                        {item.status || "actif"}
+                      </button>
+                    </div>
+                    <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                      style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                  </div>
+                </div>
+              );
+            })
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouveau projet 📁"
+          fields={[
+            { key: "title", label: "Nom du projet", required: true },
+            { key: "desc",  label: "Description",   type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Notes ----
+function NotesTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/notes` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, content: form.content || "",
+    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const del = (id) => db.collection(path).doc(id).delete();
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Notes 💬</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} note{items.length !== 1 ? "s" : ""}</p>
+      </div>
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Nouvelle note
+        </button>
+        {items.length === 0
+          ? <EmptyState emoji="💬" text="Aucune note partagée" />
+          : items.map(item => (
+            <div key={item.id} className="card p-4 mb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                    <UserBadge uid={item.by} members={members} />
+                  </div>
+                  {item.content && <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--secondary)" }}>{item.content}</p>}
+                </div>
+                <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouvelle note 💬"
+          fields={[
+            { key: "title",   label: "Titre",   required: true },
+            { key: "content", label: "Contenu", type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Liens ----
+function LiensTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/liens` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, url: form.url || "", desc: form.desc || "",
+    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const del = (id) => db.collection(path).doc(id).delete();
+
+  const formatUrl = (url) => {
+    try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
+    catch { return url; }
+  };
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Liens 🔗</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} ressource{items.length !== 1 ? "s" : ""}</p>
+      </div>
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter un lien
+        </button>
+        {items.length === 0
+          ? <EmptyState emoji="🔗" text="Aucun lien partagé" />
+          : items.map(item => (
+            <div key={item.id} className="card p-4 mb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                    <UserBadge uid={item.by} members={members} />
+                  </div>
+                  {item.url && (
+                    <a href={item.url.startsWith("http") ? item.url : "https://" + item.url} target="_blank" rel="noopener noreferrer"
+                      className="text-sm underline block mb-1" style={{ color: "var(--accent)" }}>
+                      🌐 {formatUrl(item.url)}
+                    </a>
+                  )}
+                  {item.desc && <p className="text-xs" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                </div>
+                <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouveau lien 🔗"
+          fields={[
+            { key: "title", label: "Titre",       required: true, placeholder: "Ex: Figma du projet" },
+            { key: "url",   label: "URL",          placeholder: "https://…" },
+            { key: "desc",  label: "Description",  type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ================================================================
 //  ESPACE — vue principale
 // ================================================================
 function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeChange }) {
-  const [activeTab,  setActiveTab]  = useState("activites");
+  const spaceMode = space?.mode || "couple";
+  const [activeTab,  setActiveTab]  = useState(spaceMode === "coworking" ? "taches" : "activites");
   const [showInfo,   setShowInfo]   = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [liveSpace,  setLiveSpace]  = useState(space);
@@ -982,16 +1305,27 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
       </div>
 
       {/* Contenu selon onglet actif */}
-      {activeTab === "activites" && <ActivitesTab spaceId={space.id} user={user} members={members} />}
-      {activeTab === "idees"     && <IdeesTab     spaceId={space.id} user={user} members={members} />}
-      {activeTab === "films"     && <FilmsTab     spaceId={space.id} user={user} members={members} />}
-      {activeTab === "musique"   && <MusiqueTab   spaceId={space.id} user={user} members={members} />}
-      {activeTab === "jeux"      && <JeuxTab      spaceId={space.id} user={user} members={members} />}
+      {spaceMode === "coworking" ? (
+        <>
+          {activeTab === "taches"  && <TachesTab  spaceId={space.id} user={user} members={members} />}
+          {activeTab === "projets" && <ProjetsTab spaceId={space.id} user={user} members={members} />}
+          {activeTab === "notes"   && <NotesTab   spaceId={space.id} user={user} members={members} />}
+          {activeTab === "liens"   && <LiensTab   spaceId={space.id} user={user} members={members} />}
+        </>
+      ) : (
+        <>
+          {activeTab === "activites" && <ActivitesTab spaceId={space.id} user={user} members={members} />}
+          {activeTab === "idees"     && <IdeesTab     spaceId={space.id} user={user} members={members} />}
+          {activeTab === "films"     && <FilmsTab     spaceId={space.id} user={user} members={members} />}
+          {activeTab === "musique"   && <MusiqueTab   spaceId={space.id} user={user} members={members} />}
+          {activeTab === "jeux"      && <JeuxTab      spaceId={space.id} user={user} members={members} />}
+        </>
+      )}
 
       {/* Barre de navigation en bas */}
       <div className="bottom-nav">
         <div className="flex">
-          {TABS.map(tab => (
+          {(spaceMode === "coworking" ? COWORK_TABS : TABS).map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
               <span className="text-xl">{tab.emoji}</span>
               <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
