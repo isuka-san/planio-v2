@@ -225,8 +225,8 @@ function EmptyState({ emoji, text }) {
   );
 }
 
-function AddModal({ title, fields, onClose, onSave }) {
-  const [form, setForm] = useState({});
+function AddModal({ title, fields, onClose, onSave, initialData, saveLabel }) {
+  const [form, setForm] = useState(initialData || {});
   const valid = !fields.find(f => f.required && !form[f.key]);
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -248,7 +248,7 @@ function AddModal({ title, fields, onClose, onSave }) {
           onClick={() => { if (!valid) return; onSave(form); onClose(); }}
           className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mt-1"
           style={{ opacity: valid ? 1 : 0.5 }}
-        >Ajouter</button>
+        >{saveLabel || "Ajouter"}</button>
       </div>
     </div>
   );
@@ -532,7 +532,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
           {spaces.map(s => (
             <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji}</span>
+                <span className="text-2xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji || "👥"}</span>
                 <div>
                   <p className="font-semibold">{s.name}</p>
                   <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
@@ -606,7 +606,6 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
               className="w-full border rounded-xl p-4 text-2xl font-bold tracking-widest text-center mb-1" maxLength={6} autoFocus />
             {err && <p className="text-red-400 text-xs mb-3">{err}</p>}
             <div className="h-3" />
-      />
             <button onClick={joinSpace} disabled={busy || code.trim().length < 6} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || code.trim().length < 6 ? 0.6 : 1 }}>
               {busy ? "…" : "Rejoindre"}
             </button>
@@ -628,13 +627,14 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
 }
 
 // ================================================================
-//  ONGLETS CONTENT
+//  ONGLETS CONTENU
 // ================================================================
 
 // ---- Activités & Voyages ----
 function ActivitesTab({ spaceId, user, members }) {
-  const [sub, setSub]     = useState("activites");
-  const [modal, setModal] = useState(false);
+  const [sub, setSub]       = useState("activites");
+  const [modal, setModal]   = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
   const items = useCollection(path);
 
@@ -642,6 +642,7 @@ function ActivitesTab({ spaceId, user, members }) {
     title: form.title, desc: form.desc || "", date: form.date || "",
     by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
+  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "", date: form.date || "" });
   const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
   const del    = (id)       => db.collection(path).doc(id).delete();
 
@@ -682,6 +683,8 @@ function ActivitesTab({ spaceId, user, members }) {
                     style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                     {item.done ? "✓" : "○"}
                   </button>
+                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                     style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
@@ -703,18 +706,34 @@ function ActivitesTab({ spaceId, user, members }) {
           onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal
+          title={sub === "activites" ? "Modifier l'activité ✎" : "Modifier le voyage ✎"}
+          fields={[
+            { key: "title", label: "Titre",       required: true },
+            { key: "desc",  label: "Description", type: "textarea" },
+            { key: "date",  label: "Date prévue", type: "date" },
+          ]}
+          initialData={editItem}
+          saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)}
+          onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Films ----
 function FilmsTab({ spaceId, user, members }) {
-  const [modal, setModal]   = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [modal, setModal]       = useState(false);
+  const [filter, setFilter]     = useState("all");
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/films` : null;
   const films = useCollection(path);
 
   const add    = (form) => db.collection(path).add({ title: form.title, genre: form.genre || "", desc: form.desc || "", by: user.uid, watched: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, genre: form.genre || "", desc: form.desc || "" });
   const toggle = (id, watched) => db.collection(path).doc(id).update({ watched: !watched });
   const del    = (id)          => db.collection(path).doc(id).delete();
 
@@ -757,6 +776,8 @@ function FilmsTab({ spaceId, user, members }) {
                     style={film.watched ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                     {film.watched ? "✓" : "○"}
                   </button>
+                  <button onClick={() => setEditItem(film)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(film.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                     style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
@@ -776,17 +797,30 @@ function FilmsTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier le film ✎"
+          fields={[
+            { key: "title", label: "Titre du film", required: true },
+            { key: "genre", label: "Genre", placeholder: "Action, Comédie, Horreur…" },
+            { key: "desc",  label: "Note", type: "textarea" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Musique ----
 function MusiqueTab({ spaceId, user, members }) {
-  const [modal, setModal] = useState(false);
+  const [modal, setModal]       = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const path     = spaceId ? `spaces/${spaceId}/musique` : null;
   const musiques = useCollection(path);
 
   const add        = (form) => db.collection(path).add({ title: form.title, artist: form.artist || "", mood: form.mood || "", by: user.uid, liked: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const edit       = (id, form) => db.collection(path).doc(id).update({ title: form.title, artist: form.artist || "", mood: form.mood || "" });
   const toggleLike = (id, liked) => db.collection(path).doc(id).update({ liked: !liked });
   const del        = (id)        => db.collection(path).doc(id).delete();
 
@@ -822,6 +856,8 @@ function MusiqueTab({ spaceId, user, members }) {
                     style={{ background: m.liked ? "#3d1830" : "var(--input-bg)", fontSize: "1rem" }}>
                     {m.liked ? "❤️" : "🤍"}
                   </button>
+                  <button onClick={() => setEditItem(m)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(m.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                     style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
@@ -841,18 +877,31 @@ function MusiqueTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier le morceau ✎"
+          fields={[
+            { key: "title",  label: "Titre",    required: true },
+            { key: "artist", label: "Artiste",  placeholder: "" },
+            { key: "mood",   label: "Ambiance", placeholder: "Ex: chill, hype, sad…" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Jeux ----
 function JeuxTab({ spaceId, user, members }) {
-  const [modal, setModal]   = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [modal, setModal]       = useState(false);
+  const [filter, setFilter]     = useState("all");
+  const [editItem, setEditItem] = useState(null);
   const path = spaceId ? `spaces/${spaceId}/jeux` : null;
   const jeux = useCollection(path);
 
   const add    = (form) => db.collection(path).add({ title: form.title, type: form.type || "", desc: form.desc || "", by: user.uid, played: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, type: form.type || "", desc: form.desc || "" });
   const toggle = (id, played) => db.collection(path).doc(id).update({ played: !played });
   const del    = (id)         => db.collection(path).doc(id).delete();
 
@@ -895,6 +944,8 @@ function JeuxTab({ spaceId, user, members }) {
                     style={jeu.played ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                     {jeu.played ? "✓" : "○"}
                   </button>
+                  <button onClick={() => setEditItem(jeu)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(jeu.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                     style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
@@ -914,18 +965,31 @@ function JeuxTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier le jeu ✎"
+          fields={[
+            { key: "title", label: "Nom du jeu", required: true },
+            { key: "type",  label: "Type", placeholder: "Coop, Solo, Compétitif…" },
+            { key: "desc",  label: "Note", type: "textarea" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Idées ----
 function IdeesTab({ spaceId, user, members }) {
-  const [modal, setModal]   = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [modal, setModal]       = useState(false);
+  const [filter, setFilter]     = useState("all");
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/idees` : null;
   const idees = useCollection(path);
 
   const add    = (form) => db.collection(path).add({ title: form.title, desc: form.desc || "", by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "" });
   const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
   const del    = (id)       => db.collection(path).doc(id).delete();
 
@@ -962,6 +1026,8 @@ function IdeesTab({ spaceId, user, members }) {
                   style={idee.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                   {idee.done ? "✓" : "○"}
                 </button>
+                <button onClick={() => setEditItem(idee)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                  style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                 <button onClick={() => del(idee.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                   style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
               </div>
@@ -979,6 +1045,16 @@ function IdeesTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier l'idée ✎"
+          fields={[
+            { key: "title", label: "Idée",        required: true },
+            { key: "desc",  label: "Description", type: "textarea" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
@@ -989,8 +1065,9 @@ function IdeesTab({ spaceId, user, members }) {
 
 // ---- Tâches ----
 function TachesTab({ spaceId, user, members }) {
-  const [modal, setModal] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [modal, setModal]       = useState(false);
+  const [filter, setFilter]     = useState("all");
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/taches` : null;
   const items = useCollection(path);
 
@@ -998,6 +1075,7 @@ function TachesTab({ spaceId, user, members }) {
     title: form.title, desc: form.desc || "", priority: form.priority || "normal",
     by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
+  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "", priority: form.priority || "normal" });
   const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
   const del    = (id)       => db.collection(path).doc(id).delete();
 
@@ -1043,6 +1121,8 @@ function TachesTab({ spaceId, user, members }) {
                         style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                         {item.done ? "✓" : "○"}
                       </button>
+                      <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                       <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                         style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                     </div>
@@ -1062,13 +1142,25 @@ function TachesTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier la tâche ✎"
+          fields={[
+            { key: "title",    label: "Titre",    required: true, placeholder: "Que faut-il faire ?" },
+            { key: "desc",     label: "Détails",  type: "textarea" },
+            { key: "priority", label: "Priorité", placeholder: "urgent / normal / bas" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Projets ----
 function ProjetsTab({ spaceId, user, members }) {
-  const [modal, setModal] = useState(false);
+  const [modal, setModal]       = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/projets` : null;
   const items = useCollection(path);
 
@@ -1076,6 +1168,7 @@ function ProjetsTab({ spaceId, user, members }) {
     title: form.title, desc: form.desc || "", status: "actif",
     by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
+  const edit = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "" });
   const cycleStatus = (id, status) => {
     const next = status === "actif" ? "pause" : status === "pause" ? "terminé" : "actif";
     db.collection(path).doc(id).update({ status: next });
@@ -1113,8 +1206,12 @@ function ProjetsTab({ spaceId, user, members }) {
                         {item.status || "actif"}
                       </button>
                     </div>
-                    <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
-                      style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
+                      <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                    </div>
                   </div>
                 </div>
               );
@@ -1130,21 +1227,33 @@ function ProjetsTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier le projet ✎"
+          fields={[
+            { key: "title", label: "Nom du projet", required: true },
+            { key: "desc",  label: "Description",   type: "textarea" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Notes ----
 function NotesTab({ spaceId, user, members }) {
-  const [modal, setModal] = useState(false);
+  const [modal, setModal]       = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/notes` : null;
   const items = useCollection(path);
 
-  const add = (form) => db.collection(path).add({
+  const add  = (form) => db.collection(path).add({
     title: form.title, content: form.content || "",
     by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
-  const del = (id) => db.collection(path).doc(id).delete();
+  const edit = (id, form) => db.collection(path).doc(id).update({ title: form.title, content: form.content || "" });
+  const del  = (id) => db.collection(path).doc(id).delete();
 
   return (
     <div className="pb-24">
@@ -1168,8 +1277,12 @@ function NotesTab({ spaceId, user, members }) {
                   </div>
                   {item.content && <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--secondary)" }}>{item.content}</p>}
                 </div>
-                <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
-                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
+                  <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                </div>
               </div>
             </div>
           ))
@@ -1184,21 +1297,33 @@ function NotesTab({ spaceId, user, members }) {
           onClose={() => setModal(false)} onSave={add}
         />
       )}
+      {editItem && (
+        <AddModal title="Modifier la note ✎"
+          fields={[
+            { key: "title",   label: "Titre",   required: true },
+            { key: "content", label: "Contenu", type: "textarea" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
+        />
+      )}
     </div>
   );
 }
 
 // ---- Liens ----
 function LiensTab({ spaceId, user, members }) {
-  const [modal, setModal] = useState(false);
+  const [modal, setModal]       = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const path  = spaceId ? `spaces/${spaceId}/liens` : null;
   const items = useCollection(path);
 
-  const add = (form) => db.collection(path).add({
+  const add  = (form) => db.collection(path).add({
     title: form.title, url: form.url || "", desc: form.desc || "",
     by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
-  const del = (id) => db.collection(path).doc(id).delete();
+  const edit = (id, form) => db.collection(path).doc(id).update({ title: form.title, url: form.url || "", desc: form.desc || "" });
+  const del  = (id) => db.collection(path).doc(id).delete();
 
   const formatUrl = (url) => {
     try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
@@ -1233,8 +1358,12 @@ function LiensTab({ spaceId, user, members }) {
                   )}
                   {item.desc && <p className="text-xs" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
                 </div>
-                <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
-                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
+                  <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                </div>
               </div>
             </div>
           ))
@@ -1248,6 +1377,17 @@ function LiensTab({ spaceId, user, members }) {
             { key: "desc",  label: "Description",  type: "textarea" },
           ]}
           onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+      {editItem && (
+        <AddModal title="Modifier le lien ✎"
+          fields={[
+            { key: "title", label: "Titre",       required: true, placeholder: "Ex: Figma du projet" },
+            { key: "url",   label: "URL",          placeholder: "https://…" },
+            { key: "desc",  label: "Description",  type: "textarea" },
+          ]}
+          initialData={editItem} saveLabel="Enregistrer"
+          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
         />
       )}
     </div>
@@ -1268,16 +1408,42 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
   useEffect(() => {
     const unsub = db.collection("spaces").doc(space.id).onSnapshot(doc => {
       if (doc.exists) setLiveSpace({ id: doc.id, ...doc.data() });
+      else onBack();
     });
     return unsub;
   }, [space.id]);
 
-  const members = liveSpace?.members || [];
+  const members   = liveSpace?.members || [];
+  const isCreator = liveSpace?.createdBy === user.uid;
 
   const copyCode = () => {
     navigator.clipboard.writeText(liveSpace?.inviteCode || "").then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const kickMember = async (m) => {
+    if (!window.confirm(`Exclure ${m.name} de l'espace ?`)) return;
+    await db.collection("spaces").doc(space.id).update({
+      memberIds: firebase.firestore.FieldValue.arrayRemove(m.uid),
+      members:   firebase.firestore.FieldValue.arrayRemove(m),
+    });
+  };
+
+  const leaveSpace = async () => {
+    if (!window.confirm("Quitter cet espace ?")) return;
+    const me = members.find(m => m.uid === user.uid);
+    await db.collection("spaces").doc(space.id).update({
+      memberIds: firebase.firestore.FieldValue.arrayRemove(user.uid),
+      members:   me ? firebase.firestore.FieldValue.arrayRemove(me) : firebase.firestore.FieldValue.arrayRemove({}),
+    });
+    onBack();
+  };
+
+  const deleteSpace = async () => {
+    if (!window.confirm("Supprimer définitivement cet espace ? Toutes les données seront perdues.")) return;
+    await db.collection("spaces").doc(space.id).delete();
+    onBack();
   };
 
   return (
@@ -1355,12 +1521,31 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                 <div className="flex-1">
                   <span className="font-medium">{m.name}</span>
                   {m.uid === user.uid && <span className="text-xs ml-2" style={{ color: "var(--inactive)" }}>(moi)</span>}
+                  {m.uid === liveSpace?.createdBy && <span className="text-xs ml-2" style={{ color: "var(--grad2)" }}>admin</span>}
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: badgeStyle(i).bg, color: badgeStyle(i).text }}>
-                  {m.emoji}
-                </span>
+                {isCreator && m.uid !== user.uid ? (
+                  <button onClick={() => kickMember(m)} className="text-xs px-2 py-1 rounded-lg"
+                    style={{ background: "#2d1520", color: "#f87171" }}>Exclure</button>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: badgeStyle(i).bg, color: badgeStyle(i).text }}>
+                    {m.emoji}
+                  </span>
+                )}
               </div>
             ))}
+
+            <div className="mt-5 flex flex-col gap-2">
+              <button onClick={leaveSpace} className="w-full py-3 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--input-bg)", color: "var(--secondary)", border: "1px solid var(--border)" }}>
+                Quitter l'espace
+              </button>
+              {isCreator && (
+                <button onClick={deleteSpace} className="w-full py-3 rounded-xl text-sm font-semibold"
+                  style={{ background: "#2d1520", color: "#f87171" }}>
+                  Supprimer l'espace
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
