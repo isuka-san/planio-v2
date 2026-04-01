@@ -1451,7 +1451,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
       {/* Header sticky */}
       <div className="gradient-bg px-4 pt-4 pb-2 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-white/80 text-2xl leading-none">‹</button>
+          <button onClick={onBack} className="flex items-center gap-1 text-white font-semibold text-sm px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>‹ Retour</button>
           <div>
             <h1 className="text-white font-bold text-base leading-tight">{liveSpace?.name}</h1>
             <div className="flex items-center gap-1">
