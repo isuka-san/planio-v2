@@ -51,7 +51,31 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect } = React;
+
+// ================================================================
+//  HOOK : modal de confirmation (remplace window.confirm pour PWA)
+// ================================================================
+const useConfirm = () => {
+  const [state, setState] = useState({ open: false, message: '', resolve: null });
+  const showConfirm = (message) => new Promise(resolve => {
+    setState({ open: true, message, resolve });
+  });
+  const handleYes = () => { state.resolve(true);  setState({ open: false, message: '', resolve: null }); };
+  const handleNo  = () => { state.resolve(false); setState({ open: false, message: '', resolve: null }); };
+  const ConfirmModal = state.open ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.65)' }}>
+      <div className="rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+        <p className="text-base mb-5 text-center" style={{ color: 'var(--text)' }}>{state.message}</p>
+        <div className="flex gap-3">
+          <button onClick={handleNo}  className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: 'var(--input-bg)', color: 'var(--secondary)', border: '1px solid var(--border)' }}>Annuler</button>
+          <button onClick={handleYes} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: '#2d1520', color: '#f87171' }}>Confirmer</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+  return { showConfirm, ConfirmModal };
+};
 
 // ================================================================
 //  FIREBASE CONFIG
@@ -638,13 +662,23 @@ function ActivitesTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
   const items = useCollection(path);
 
-  const add = (form) => db.collection(path).add({
-    title: form.title, desc: form.desc || "", date: form.date || "",
-    by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "", date: form.date || "" });
-  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
-  const del    = (id)       => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, desc: form.desc || "", date: form.date || "", by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "", date: form.date || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const toggle = async (id, done) => {
+    try { await db.collection(path).doc(id).update({ done: !done }); }
+    catch(e) { console.error('Erreur toggle:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   return (
     <div className="pb-24">
@@ -732,10 +766,23 @@ function FilmsTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/films` : null;
   const films = useCollection(path);
 
-  const add    = (form) => db.collection(path).add({ title: form.title, genre: form.genre || "", desc: form.desc || "", by: user.uid, watched: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, genre: form.genre || "", desc: form.desc || "" });
-  const toggle = (id, watched) => db.collection(path).doc(id).update({ watched: !watched });
-  const del    = (id)          => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, genre: form.genre || "", desc: form.desc || "", by: user.uid, watched: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, genre: form.genre || "", desc: form.desc || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const toggle = async (id, watched) => {
+    try { await db.collection(path).doc(id).update({ watched: !watched }); }
+    catch(e) { console.error('Erreur toggle:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   const filtered = filter === "all" ? films : filter === "watched" ? films.filter(f => f.watched) : films.filter(f => !f.watched);
 
@@ -819,10 +866,23 @@ function MusiqueTab({ spaceId, user, members }) {
   const path     = spaceId ? `spaces/${spaceId}/musique` : null;
   const musiques = useCollection(path);
 
-  const add        = (form) => db.collection(path).add({ title: form.title, artist: form.artist || "", mood: form.mood || "", by: user.uid, liked: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  const edit       = (id, form) => db.collection(path).doc(id).update({ title: form.title, artist: form.artist || "", mood: form.mood || "" });
-  const toggleLike = (id, liked) => db.collection(path).doc(id).update({ liked: !liked });
-  const del        = (id)        => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, artist: form.artist || "", mood: form.mood || "", by: user.uid, liked: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, artist: form.artist || "", mood: form.mood || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const toggleLike = async (id, liked) => {
+    try { await db.collection(path).doc(id).update({ liked: !liked }); }
+    catch(e) { console.error('Erreur toggle:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   return (
     <div className="pb-24">
@@ -900,10 +960,23 @@ function JeuxTab({ spaceId, user, members }) {
   const path = spaceId ? `spaces/${spaceId}/jeux` : null;
   const jeux = useCollection(path);
 
-  const add    = (form) => db.collection(path).add({ title: form.title, type: form.type || "", desc: form.desc || "", by: user.uid, played: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, type: form.type || "", desc: form.desc || "" });
-  const toggle = (id, played) => db.collection(path).doc(id).update({ played: !played });
-  const del    = (id)         => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, type: form.type || "", desc: form.desc || "", by: user.uid, played: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, type: form.type || "", desc: form.desc || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const toggle = async (id, played) => {
+    try { await db.collection(path).doc(id).update({ played: !played }); }
+    catch(e) { console.error('Erreur toggle:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   const filtered = filter === "all" ? jeux : filter === "played" ? jeux.filter(j => j.played) : jeux.filter(j => !j.played);
 
@@ -988,10 +1061,23 @@ function IdeesTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/idees` : null;
   const idees = useCollection(path);
 
-  const add    = (form) => db.collection(path).add({ title: form.title, desc: form.desc || "", by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "" });
-  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
-  const del    = (id)       => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, desc: form.desc || "", by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const toggle = async (id, done) => {
+    try { await db.collection(path).doc(id).update({ done: !done }); }
+    catch(e) { console.error('Erreur toggle:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   const filtered = filter === "all" ? idees : filter === "done" ? idees.filter(i => i.done) : idees.filter(i => !i.done);
 
@@ -1071,13 +1157,23 @@ function TachesTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/taches` : null;
   const items = useCollection(path);
 
-  const add    = (form) => db.collection(path).add({
-    title: form.title, desc: form.desc || "", priority: form.priority || "normal",
-    by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  const edit   = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "", priority: form.priority || "normal" });
-  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
-  const del    = (id)       => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, desc: form.desc || "", priority: form.priority || "normal", by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "", priority: form.priority || "normal" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const toggle = async (id, done) => {
+    try { await db.collection(path).doc(id).update({ done: !done }); }
+    catch(e) { console.error('Erreur toggle:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   const filtered = filter === "all" ? items : filter === "done" ? items.filter(i => i.done) : items.filter(i => !i.done);
   const priorityStyle = (p) => p === "urgent" ? { bg: "#3d1515", color: "#f87171" } : p === "bas" ? { bg: "#0b2e26", color: "#5eead4" } : { bg: "#2d1a0b", color: "#fcd34d" };
@@ -1164,16 +1260,24 @@ function ProjetsTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/projets` : null;
   const items = useCollection(path);
 
-  const add = (form) => db.collection(path).add({
-    title: form.title, desc: form.desc || "", status: "actif",
-    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  const edit = (id, form) => db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "" });
-  const cycleStatus = (id, status) => {
-    const next = status === "actif" ? "pause" : status === "pause" ? "terminé" : "actif";
-    db.collection(path).doc(id).update({ status: next });
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, desc: form.desc || "", status: "actif", by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
   };
-  const del = (id) => db.collection(path).doc(id).delete();
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, desc: form.desc || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const cycleStatus = async (id, status) => {
+    const next = status === "actif" ? "pause" : status === "pause" ? "terminé" : "actif";
+    try { await db.collection(path).doc(id).update({ status: next }); }
+    catch(e) { console.error('Erreur statut:', e); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   const statusStyle = (s) => s === "terminé" ? { bg: "#1a3a2a", color: "#4ade80" } : s === "pause" ? { bg: "#2d1a0b", color: "#fcd34d" } : { bg: "#1a2e40", color: "#60a5fa" };
 
@@ -1248,12 +1352,19 @@ function NotesTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/notes` : null;
   const items = useCollection(path);
 
-  const add  = (form) => db.collection(path).add({
-    title: form.title, content: form.content || "",
-    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  const edit = (id, form) => db.collection(path).doc(id).update({ title: form.title, content: form.content || "" });
-  const del  = (id) => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, content: form.content || "", by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, content: form.content || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   return (
     <div className="pb-24">
@@ -1318,12 +1429,19 @@ function LiensTab({ spaceId, user, members }) {
   const path  = spaceId ? `spaces/${spaceId}/liens` : null;
   const items = useCollection(path);
 
-  const add  = (form) => db.collection(path).add({
-    title: form.title, url: form.url || "", desc: form.desc || "",
-    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  const edit = (id, form) => db.collection(path).doc(id).update({ title: form.title, url: form.url || "", desc: form.desc || "" });
-  const del  = (id) => db.collection(path).doc(id).delete();
+  const add = async (form) => {
+    try { await db.collection(path).add({ title: form.title, url: form.url || "", desc: form.desc || "", by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
+  };
+  const edit = async (id, form) => {
+    try { await db.collection(path).doc(id).update({ title: form.title, url: form.url || "", desc: form.desc || "" }); }
+    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
+  };
+  const del = async (id) => {
+    if (!window.confirm('Supprimer cet élément ?')) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+  };
 
   const formatUrl = (url) => {
     try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
@@ -1404,6 +1522,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
   const [showSettings, setShowSettings] = useState(false);
   const [liveSpace,  setLiveSpace]  = useState(space);
   const [copied,     setCopied]     = useState(false);
+  const { showConfirm, ConfirmModal } = useConfirm();
 
   useEffect(() => {
     const unsub = db.collection("spaces").doc(space.id).onSnapshot(doc => {
@@ -1423,7 +1542,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
   };
 
   const kickMember = async (m) => {
-    if (!window.confirm(`Exclure ${m.name} de l'espace ?`)) return;
+    if (!await showConfirm(`Exclure ${m.name} de l'espace ?`)) return;
     await db.collection("spaces").doc(space.id).update({
       memberIds: firebase.firestore.FieldValue.arrayRemove(m.uid),
       members:   firebase.firestore.FieldValue.arrayRemove(m),
@@ -1431,7 +1550,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
   };
 
   const leaveSpace = async () => {
-    if (!window.confirm("Quitter cet espace ?")) return;
+    if (!await showConfirm("Quitter cet espace ?")) return;
     const me = members.find(m => m.uid === user.uid);
     await db.collection("spaces").doc(space.id).update({
       memberIds: firebase.firestore.FieldValue.arrayRemove(user.uid),
@@ -1441,7 +1560,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
   };
 
   const deleteSpace = async () => {
-    if (!window.confirm("Supprimer définitivement cet espace ? Toutes les données seront perdues.")) return;
+    if (!await showConfirm("Supprimer définitivement cet espace ? Toutes les données seront perdues.")) return;
     await db.collection("spaces").doc(space.id).delete();
     onBack();
   };
@@ -1451,7 +1570,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
       {/* Header sticky */}
       <div className="gradient-bg px-4 pt-4 pb-2 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="flex items-center gap-1 text-white font-semibold text-sm px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>‹</button>
+          <button onClick={onBack} className="flex items-center justify-center text-white font-bold text-2xl w-9 h-9 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>‹</button>
           <div>
             <h1 className="text-white font-bold text-base leading-tight">{liveSpace?.name}</h1>
             <div className="flex items-center gap-1">
@@ -1559,6 +1678,9 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
           onThemeChange={onThemeChange}
         />
       )}
+
+      {/* Modal confirmation */}
+      {ConfirmModal}
     </div>
   );
 }
@@ -1581,15 +1703,19 @@ function App() {
   }, []);
 
   useEffect(() => {
-    return auth.onAuthStateChanged(async (u) => {
+    let unsubUser = null;
+    const unsubAuth = auth.onAuthStateChanged((u) => {
       setUser(u);
+      if (unsubUser) { unsubUser(); unsubUser = null; }
       if (u) {
-        const doc = await db.collection("users").doc(u.uid).get();
-        if (doc.exists) setUserData(doc.data());
+        unsubUser = db.collection("users").doc(u.uid).onSnapshot(doc => {
+          if (doc.exists) setUserData(doc.data());
+        });
       } else {
         setUserData(null);
       }
     });
+    return () => { unsubAuth(); if (unsubUser) unsubUser(); };
   }, []);
 
   const handleThemeChange = (theme) => {
