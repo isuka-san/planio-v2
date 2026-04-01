@@ -1,5 +1,1443 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head><title>Test</title></head>
-<body>Test File</body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Planio V2</title>
+  <meta name="theme-color" content="#0d0d14" id="theme-meta" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Planio" />
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase 9 (compat mode — pas besoin de build) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --grad1: #f9a8d4; --grad2: #c084fc;
+      --accent: #f472b6;
+      --bg: #0d0d14; --text: #f0eefa;
+      --card: #1a1527; --border: #2a2242;
+      --nav-bg: #12101e;
+      --inactive: #6b5f8a; --secondary: #9791b0;
+      --input-bg: #221c35; --input-border: #3a2f55;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; }
+    .gradient-bg { background: linear-gradient(135deg, var(--grad1) 0%, var(--grad2) 100%); }
+    .card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav-bg); border-top: 1px solid var(--border); padding: 8px 0 env(safe-area-inset-bottom); z-index: 100; }
+    .tab-btn { transition: all 0.2s; color: var(--inactive); }
+    .tab-btn.active { color: var(--accent); }
+    .filter-btn { background: var(--input-bg); color: var(--secondary); border: 1px solid var(--border); transition: all 0.2s; }
+    .filter-btn.active { background: linear-gradient(135deg, var(--grad1) 0%, var(--grad2) 100%); color: white; border-color: transparent; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; display: flex; align-items: flex-end; }
+    .modal-content { background: var(--card); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    input, select, textarea { outline: none; background: var(--input-bg); border-color: var(--input-border) !important; color: var(--text); font-size: 1rem; }
+    input::placeholder, textarea::placeholder { color: var(--inactive); }
+    select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem !important; }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ================================================================
+//  FIREBASE CONFIG
+// ================================================================
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBsH79Y5mJ-2fszESFb329sMjuuXGkkO_U",
+  authDomain:        "planio-v2-4bd57.firebaseapp.com",
+  projectId:         "planio-v2-4bd57",
+  storageBucket:     "planio-v2-4bd57.firebasestorage.app",
+  messagingSenderId: "440367252697",
+  appId:             "1:440367252697:web:107b01ed118dceaa7e6ac8"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ================================================================
+//  THÈMES
+// ================================================================
+const THEMES = [
+  {
+    id: "mauve", name: "Mauve",
+    grad1: "#f9a8d4", grad2: "#c084fc", accent: "#f472b6",
+    bg: "#0d0d14", text: "#f0eefa", card: "#1a1527", border: "#2a2242",
+    navBg: "#12101e", inactive: "#6b5f8a", secondary: "#9791b0",
+    inputBg: "#221c35", inputBorder: "#3a2f55",
+  },
+  {
+    id: "vert", name: "Vert",
+    grad1: "#86efac", grad2: "#10b981", accent: "#34d399",
+    bg: "#061210", text: "#e8fdf5", card: "#0d1f18", border: "#1a3d2a",
+    navBg: "#060f0d", inactive: "#4a7a65", secondary: "#6aab8e",
+    inputBg: "#0f2a1e", inputBorder: "#1e4d35",
+  },
+  {
+    id: "orange", name: "Orange",
+    grad1: "#fdba74", grad2: "#f97316", accent: "#fb923c",
+    bg: "#110a04", text: "#fff1e6", card: "#1f1208", border: "#3d2010",
+    navBg: "#0e0804", inactive: "#7a5a3a", secondary: "#a07858",
+    inputBg: "#2a1a0a", inputBorder: "#4a2f12",
+  },
+  {
+    id: "rouge", name: "Rouge",
+    grad1: "#fca5a5", grad2: "#ef4444", accent: "#f87171",
+    bg: "#120808", text: "#fff0f0", card: "#1f0d0d", border: "#3d1515",
+    navBg: "#100606", inactive: "#7a4848", secondary: "#a06868",
+    inputBg: "#2a1010", inputBorder: "#4a1a1a",
+  },
+  {
+    id: "bleu", name: "Bleu",
+    grad1: "#93c5fd", grad2: "#3b82f6", accent: "#60a5fa",
+    bg: "#060810", text: "#eff6ff", card: "#0d1020", border: "#1a2240",
+    navBg: "#04060e", inactive: "#4a5f8a", secondary: "#6a80aa",
+    inputBg: "#0d1530", inputBorder: "#1a2a50",
+  },
+];
+
+function applyTheme(theme) {
+  const r = document.documentElement;
+  r.style.setProperty('--grad1',        theme.grad1);
+  r.style.setProperty('--grad2',        theme.grad2);
+  r.style.setProperty('--accent',       theme.accent);
+  r.style.setProperty('--bg',           theme.bg);
+  r.style.setProperty('--text',         theme.text);
+  r.style.setProperty('--card',         theme.card);
+  r.style.setProperty('--border',       theme.border);
+  r.style.setProperty('--nav-bg',       theme.navBg);
+  r.style.setProperty('--inactive',     theme.inactive);
+  r.style.setProperty('--secondary',    theme.secondary);
+  r.style.setProperty('--input-bg',     theme.inputBg);
+  r.style.setProperty('--input-border', theme.inputBorder);
+  const meta = document.getElementById('theme-meta');
+  if (meta) meta.content = theme.bg;
+  localStorage.setItem('planio-theme', theme.id);
+}
+
+// ================================================================
+//  CONSTANTES
+// ================================================================
+const TABS = [
+  { id: "activites", label: "Activités", emoji: "🎯" },
+  { id: "idees",     label: "Idées",     emoji: "⭐" },
+  { id: "films",     label: "Films",     emoji: "🎬" },
+  { id: "musique",   label: "Musique",   emoji: "🎵" },
+  { id: "jeux",      label: "Jeux",      emoji: "🎮" },
+];
+
+const COWORK_TABS = [
+  { id: "taches",  label: "Tâches",  emoji: "✅" },
+  { id: "projets", label: "Projets", emoji: "📁" },
+  { id: "notes",   label: "Notes",   emoji: "💬" },
+  { id: "liens",   label: "Liens",   emoji: "🔗" },
+];
+
+const SPACE_MODES = [
+  { id: "social",    name: "Social",    emoji: "👥", desc: "Activités, films, musique, jeux…" },
+  { id: "coworking", name: "Coworking", emoji: "💼", desc: "Tâches, projets, notes, liens…"  },
+];
+
+const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","🎸","🚀","🌈","🍕","🐉","⚡"];
+
+const BADGE_COLORS = [
+  { bg: "#3d1830", text: "#fba8d0" },
+  { bg: "#2d1a40", text: "#d8b4fe" },
+  { bg: "#0b2e26", text: "#5eead4" },
+  { bg: "#1a2e10", text: "#86efac" },
+  { bg: "#1a2040", text: "#93c5fd" },
+  { bg: "#2e1a0b", text: "#fcd34d" },
+];
+
+const badgeStyle = (idx) => BADGE_COLORS[idx % BADGE_COLORS.length];
+
+const genCode = () => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let c = "";
+  for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return c;
+};
+
+// ================================================================
+//  HOOK : écoute en temps réel une sous-collection Firestore
+// ================================================================
+function useCollection(path) {
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    if (!path) return;
+    const unsub = db.collection(path)
+      .orderBy("createdAt", "desc")
+      .onSnapshot(
+        snap => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        err  => console.error("Firestore error:", err)
+      );
+    return unsub;
+  }, [path]);
+  return items;
+}
+
+// ================================================================
+//  COMPOSANTS PARTAGÉS
+// ================================================================
+function Spinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="gradient-bg rounded-2xl p-8 text-center">
+        <p className="text-white font-bold text-2xl">Planio</p>
+        <p className="text-white/60 text-sm mt-2">Chargement…</p>
+      </div>
+    </div>
+  );
+}
+
+function UserBadge({ uid, members }) {
+  const idx = (members || []).findIndex(m => m.uid === uid);
+  const m   = (members || [])[idx];
+  if (!m) return null;
+  const s = badgeStyle(idx);
+  return (
+    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.text }}>
+      {m.emoji}
+    </span>
+  );
+}
+
+function EmptyState({ emoji, text }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16" style={{ color: "var(--inactive)" }}>
+      <div className="text-5xl mb-3">{emoji}</div>
+      <p className="text-sm">{text}</p>
+    </div>
+  );
+}
+
+function AddModal({ title, fields, onClose, onSave }) {
+  const [form, setForm] = useState({});
+  const valid = !fields.find(f => f.required && !form[f.key]);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-lg" style={{ color: "var(--text)" }}>{title}</h3>
+          <button onClick={onClose} className="text-2xl leading-none" style={{ color: "var(--inactive)" }}>×</button>
+        </div>
+        {fields.map(f => (
+          <div key={f.key} className="mb-4">
+            <label className="block text-sm font-medium mb-1" style={{ color: "var(--secondary)" }}>{f.label}</label>
+            {f.type === "textarea"
+              ? <textarea className="w-full border rounded-xl p-3 text-sm resize-none h-20" placeholder={f.placeholder || ""} value={form[f.key] || ""} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
+              : <input type={f.type || "text"} className="w-full border rounded-xl p-3 text-sm" placeholder={f.placeholder || ""} value={form[f.key] || ""} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
+            }
+          </div>
+        ))}
+        <button
+          onClick={() => { if (!valid) return; onSave(form); onClose(); }}
+          className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mt-1"
+          style={{ opacity: valid ? 1 : 0.5 }}
+        >Ajouter</button>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
+//  ÉCRAN D'AUTHENTIFICATION
+// ================================================================
+function AuthScreen({ onDone }) {
+  const [mode, setMode]       = useState("login");
+  const [email, setEmail]     = useState("");
+  const [pwd, setPwd]         = useState("");
+  const [name, setName]       = useState("");
+  const [emoji, setEmoji]     = useState("🦖");
+  const [err, setErr]         = useState("");
+  const [busy, setBusy]       = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setErr(""); setBusy(true);
+    try {
+      if (mode === "login") {
+        await auth.signInWithEmailAndPassword(email, pwd);
+      } else {
+        if (!name.trim()) { setErr("Choisis un pseudo"); setBusy(false); return; }
+        const cred = await auth.createUserWithEmailAndPassword(email, pwd);
+        await db.collection("users").doc(cred.user.uid).set({
+          name: name.trim(), emoji,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await cred.user.updateProfile({ displayName: name.trim() });
+      }
+    } catch (ex) {
+      const msgs = {
+        "auth/email-already-in-use":  "Cet email est déjà utilisé.",
+        "auth/invalid-email":         "Email invalide.",
+        "auth/weak-password":         "Mot de passe trop court (6 caractères min).",
+        "auth/user-not-found":        "Compte introuvable.",
+        "auth/wrong-password":        "Mot de passe incorrect.",
+        "auth/invalid-credential":    "Email ou mot de passe incorrect.",
+      };
+      setErr(msgs[ex.code] || ex.message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-5">
+      <div className="w-full max-w-sm">
+        <div className="gradient-bg rounded-2xl p-6 mb-5 text-center">
+          <h1 className="text-white font-bold text-3xl">Planio</h1>
+          <p className="text-white/70 text-sm mt-1">listes partagées entre potes</p>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex mb-5 rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            {["login", "register"].map(m => (
+              <button key={m} onClick={() => { setMode(m); setErr(""); }}
+                className="flex-1 py-2.5 text-sm font-semibold transition-all"
+                style={mode === m ? { background: "linear-gradient(135deg,var(--grad1),var(--grad2))", color: "white" } : { color: "var(--inactive)" }}>
+                {m === "login" ? "Connexion" : "Créer un compte"}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={submit}>
+            {mode === "register" && (
+              <>
+                <label className="block text-xs text-[#9791b0] uppercase tracking-wider mb-1">Pseudo</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Ton pseudo"
+                  className="w-full border rounded-xl p-3 text-sm mb-4" autoComplete="username" />
+
+                <label className="block text-xs text-[#9791b0] uppercase tracking-wider mb-2">Ton emoji</label>
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {EMOJIS.map(em => (
+                    <button key={em} type="button" onClick={() => setEmoji(em)}
+                      className="w-10 h-10 rounded-full text-xl flex items-center justify-center transition-all"
+                      style={{ background: "var(--input-bg)", outline: emoji === em ? "2px solid var(--accent)" : "none", transform: emoji === em ? "scale(1.15)" : "scale(1)" }}>
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <label className="block text-xs text-[#9791b0] uppercase tracking-wider mb-1">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ton@email.com"
+              className="w-full border rounded-xl p-3 text-sm mb-4" autoComplete="email" />
+
+            <label className="block text-xs text-[#9791b0] uppercase tracking-wider mb-1">Mot de passe</label>
+            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="••••••••"
+              className="w-full border rounded-xl p-3 text-sm mb-4" autoComplete={mode === "login" ? "current-password" : "new-password"} />
+
+            {err && <p className="text-red-400 text-xs mb-3 p-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)" }}>{err}</p>}
+
+            <button type="submit" disabled={busy} className="w-full gradient-bg text-white font-bold py-3 rounded-xl" style={{ opacity: busy ? 0.7 : 1 }}>
+              {busy ? "…" : mode === "login" ? "Se connecter" : "Créer mon compte"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
+//  MODAL PARAMÈTRES
+// ================================================================
+function SettingsModal({ onClose, user, currentThemeId, onThemeChange }) {
+  const [oldPwd,  setOldPwd]  = useState("");
+  const [newPwd,  setNewPwd]  = useState("");
+  const [confPwd, setConfPwd] = useState("");
+  const [pwdErr,  setPwdErr]  = useState("");
+  const [pwdOk,   setPwdOk]   = useState(false);
+  const [busy,    setBusy]    = useState(false);
+
+  const changePwd = async () => {
+    if (newPwd.length < 6)   { setPwdErr("6 caractères minimum."); return; }
+    if (newPwd !== confPwd)  { setPwdErr("Les mots de passe ne correspondent pas."); return; }
+    setBusy(true); setPwdErr(""); setPwdOk(false);
+    try {
+      const cred = firebase.auth.EmailAuthProvider.credential(user.email, oldPwd);
+      await user.reauthenticateWithCredential(cred);
+      await user.updatePassword(newPwd);
+      setPwdOk(true);
+      setOldPwd(""); setNewPwd(""); setConfPwd("");
+    } catch (ex) {
+      const msgs = {
+        "auth/wrong-password":    "Mot de passe actuel incorrect.",
+        "auth/too-many-requests": "Trop de tentatives, réessaie plus tard.",
+        "auth/invalid-credential":"Mot de passe actuel incorrect.",
+      };
+      setPwdErr(msgs[ex.code] || ex.message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-bold text-lg">Paramètres ⚙️</h3>
+          <button onClick={onClose} className="text-2xl leading-none" style={{ color: "var(--inactive)" }}>×</button>
+        </div>
+
+        {/* Thème */}
+        <p className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--secondary)" }}>Thème</p>
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {THEMES.map(t => (
+            <button key={t.id} onClick={() => onThemeChange(t)}
+              className="flex-1 min-w-[56px] flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all"
+              style={{
+                background: currentThemeId === t.id ? t.card : "transparent",
+                border: `2px solid ${currentThemeId === t.id ? t.accent : t.border}`,
+              }}>
+              <div className="w-8 h-8 rounded-full" style={{ background: `linear-gradient(135deg, ${t.grad1}, ${t.grad2})` }} />
+              <span className="text-xs font-medium" style={{ color: currentThemeId === t.id ? t.text : "var(--inactive)" }}>{t.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Changer mot de passe */}
+        <p className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--secondary)" }}>Changer le mot de passe</p>
+        <input type="password" placeholder="Mot de passe actuel" value={oldPwd} onChange={e => setOldPwd(e.target.value)}
+          className="w-full border rounded-xl p-3 text-sm mb-3" autoComplete="current-password" />
+        <input type="password" placeholder="Nouveau mot de passe" value={newPwd} onChange={e => setNewPwd(e.target.value)}
+          className="w-full border rounded-xl p-3 text-sm mb-3" autoComplete="new-password" />
+        <input type="password" placeholder="Confirmer le nouveau" value={confPwd} onChange={e => setConfPwd(e.target.value)}
+          className="w-full border rounded-xl p-3 text-sm mb-2" autoComplete="new-password" />
+        {pwdErr && <p className="text-red-400 text-xs mb-2 p-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)" }}>{pwdErr}</p>}
+        {pwdOk  && <p className="text-green-400 text-xs mb-2 p-2 rounded-lg" style={{ background: "rgba(74,222,128,0.1)" }}>Mot de passe modifié ✓</p>}
+        <button onClick={changePwd} disabled={busy || !oldPwd || !newPwd || !confPwd}
+          className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-5"
+          style={{ opacity: busy || !oldPwd || !newPwd || !confPwd ? 0.5 : 1 }}>
+          {busy ? "…" : "Modifier le mot de passe"}
+        </button>
+
+        {/* Déconnexion */}
+        <button onClick={() => auth.signOut()}
+          className="w-full py-3 rounded-xl text-sm font-semibold"
+          style={{ background: "#2d1520", color: "#f87171" }}>
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
+//  ÉCRAN D'ACCUEIL — liste des espaces
+// ================================================================
+function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChange }) {
+  const [spaces, setSpaces]         = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin]     = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newName, setNewName]       = useState("");
+  const [spaceMode, setSpaceMode]   = useState(null);
+  const [createStep, setCreateStep] = useState("mode");
+  const [code, setCode]             = useState("");
+  const [err, setErr]               = useState("");
+  const [busy, setBusy]             = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = db.collection("spaces")
+      .where("memberIds", "array-contains", user.uid)
+      .onSnapshot(snap => setSpaces(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return unsub;
+  }, [user]);
+
+  const myMember = { uid: user.uid, name: userData?.name || user.displayName || "Moi", emoji: userData?.emoji || "🦖" };
+
+  const createSpace = async () => {
+    if (!newName.trim()) return;
+    setBusy(true);
+    const inviteCode = genCode();
+    const mode = spaceMode || "social";
+    const ref = await db.collection("spaces").add({
+      name:       newName.trim(),
+      inviteCode,
+      mode,
+      createdBy:  user.uid,
+      memberIds:  [user.uid],
+      members:    [myMember],
+      createdAt:  firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    setBusy(false); setShowCreate(false); setNewName(""); setSpaceMode(null); setCreateStep("mode");
+    onEnterSpace({ id: ref.id, name: newName.trim(), inviteCode, mode, members: [myMember], memberIds: [user.uid] });
+  };
+
+  const joinSpace = async () => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) return;
+    setErr(""); setBusy(true);
+    try {
+      const snap = await db.collection("spaces").where("inviteCode", "==", trimmed).get();
+      if (snap.empty) { setErr("Code invalide — vérifie les caractères."); setBusy(false); return; }
+      const doc   = snap.docs[0];
+      const space = { id: doc.id, ...doc.data() };
+      if (!(space.memberIds || []).includes(user.uid)) {
+        await doc.ref.update({
+          memberIds: firebase.firestore.FieldValue.arrayUnion(user.uid),
+          members:   firebase.firestore.FieldValue.arrayUnion(myMember),
+        });
+      }
+      setShowJoin(false); setCode(""); setBusy(false);
+      onEnterSpace({ ...space, members: [...(space.members || []), myMember] });
+    } catch (ex) { setErr(ex.message); setBusy(false); }
+  };
+
+  return (
+    <div className="min-h-screen p-4 max-w-md mx-auto">
+      {/* Header */}
+      <div className="gradient-bg rounded-2xl px-5 pt-5 pb-4 mb-5 flex items-start justify-between">
+        <div>
+          <h1 className="text-white font-bold text-2xl">Planio</h1>
+          <p className="text-white/70 text-sm mt-0.5">
+            {userData?.emoji || "👋"} {userData?.name || user.displayName || "Bienvenue"}
+          </p>
+        </div>
+        <button onClick={() => setShowSettings(true)} className="text-xl text-white/70 px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>
+          ⚙️
+        </button>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 mb-5">
+        <button onClick={() => setShowCreate(true)} className="flex-1 gradient-bg text-white font-semibold py-3 rounded-xl text-sm">
+          + Créer un espace
+        </button>
+        <button onClick={() => { setShowJoin(true); setErr(""); }} className="flex-1 text-white font-semibold py-3 rounded-xl text-sm" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+          Rejoindre
+        </button>
+      </div>
+
+      {/* Liste des espaces */}
+      {spaces.length === 0 ? (
+        <EmptyState emoji="🚀" text="Crée ou rejoins un espace pour commencer" />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {spaces.map(s => (
+            <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji}</span>
+                <div>
+                  <p className="font-semibold">{s.name}</p>
+                  <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
+                    {(s.members || []).map(m => m.emoji).join(" ")} · {(s.memberIds || []).length} membre{((s.memberIds || []).length > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xl" style={{ color: "var(--inactive)" }}>›</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Modal créer — 2 étapes */}
+      {showCreate && (
+        <div className="modal-overlay" onClick={() => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg">
+                {createStep === "mode" ? "Quel type d'espace ?" : "Nouvel espace"}
+              </h3>
+              <button onClick={() => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); }} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
+            </div>
+
+            {createStep === "mode" ? (
+              <>
+                <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>Choisis un mode pour adapter l'interface.</p>
+                <div className="flex flex-col gap-3 mb-2">
+                  {SPACE_MODES.map(m => (
+                    <button key={m.id} onClick={() => { setSpaceMode(m.id); setCreateStep("name"); }}
+                      className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all"
+                      style={{ background: "var(--input-bg)", border: "2px solid var(--border)" }}>
+                      <span className="text-4xl">{m.emoji}</span>
+                      <div>
+                        <p className="font-bold text-base" style={{ color: "var(--text)" }}>{m.name}</p>
+                        <p className="text-sm" style={{ color: "var(--secondary)" }}>{m.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4 p-3 rounded-xl" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+                  <span className="text-2xl">{SPACE_MODES.find(m => m.id === spaceMode)?.emoji}</span>
+                  <span className="font-medium" style={{ color: "var(--secondary)" }}>{SPACE_MODES.find(m => m.id === spaceMode)?.name}</span>
+                  <button onClick={() => setCreateStep("mode")} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{ color: "var(--accent)", background: "transparent" }}>Changer</button>
+                </div>
+                <label className="block text-xs uppercase tracking-wider mb-1" style={{ color: "var(--secondary)" }}>Nom de l'espace</label>
+                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Vacances, Coloc, Planio…"
+                  className="w-full border rounded-xl p-3 text-sm mb-4" autoFocus />
+                <button onClick={createSpace} disabled={busy || !newName.trim()} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || !newName.trim() ? 0.6 : 1 }}>
+                  {busy ? "…" : "Créer l'espace"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal rejoindre */}
+      {showJoin && (
+        <div className="modal-overlay" onClick={() => setShowJoin(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg">Rejoindre un espace</h3>
+              <button onClick={() => setShowJoin(false)} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
+            </div>
+            <label className="block text-xs uppercase tracking-wider mb-1" style={{ color: "var(--secondary)" }}>Code d'invitation</label>
+            <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="EX: XK7F2P"
+              className="w-full border rounded-xl p-4 text-2xl font-bold tracking-widest text-center mb-1" maxLength={6} autoFocus />
+            {err && <p className="text-red-400 text-xs mb-3">{err}</p>}
+            <div className="h-3" />
+      />
+            <button onClick={joinSpace} disabled={busy || code.trim().length < 6} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || code.trim().length < 6 ? 0.6 : 1 }}>
+              {busy ? "…" : "Rejoindre"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal paramètres */}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          user={user}
+          currentThemeId={currentThemeId}
+          onThemeChange={(t) => { onThemeChange(t); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ================================================================
+//  ONGLETS CONTENT
+// ================================================================
+
+// ---- Activités & Voyages ----
+function ActivitesTab({ spaceId, user, members }) {
+  const [sub, setSub]     = useState("activites");
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, desc: form.desc || "", date: form.date || "",
+    by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
+  const del    = (id)       => db.collection(path).doc(id).delete();
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6 pb-4">
+        <h2 className="text-white font-bold text-xl mb-4">Plans</h2>
+        <div className="flex rounded-xl p-1 gap-1" style={{ background: "rgba(0,0,0,0.2)" }}>
+          {[["activites","🎯 Activités"], ["voyages","✈️ Voyages"]].map(([t, lbl]) => (
+            <button key={t} onClick={() => setSub(t)} className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
+              style={sub === t ? { background: "white", color: "#be185d" } : { color: "white" }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter {sub === "activites" ? "une activité" : "un voyage"}
+        </button>
+
+        {items.length === 0
+          ? <EmptyState emoji={sub === "activites" ? "🎯" : "✈️"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
+          : items.map(item => (
+            <div key={item.id} className="card p-4 mb-3" style={item.done ? { opacity: 0.45 } : {}}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
+                    <UserBadge uid={item.by} members={members} />
+                  </div>
+                  {item.desc && <p className="text-sm mb-1" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                  {item.date && <p className="text-xs" style={{ color: "var(--grad1)" }}>📅 {new Date(item.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button onClick={() => toggle(item.id, item.done)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                    style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                    {item.done ? "✓" : "○"}
+                  </button>
+                  <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      {modal && (
+        <AddModal
+          title={sub === "activites" ? "Nouvelle activité 🎯" : "Nouveau voyage ✈️"}
+          fields={[
+            { key: "title", label: "Titre",       required: true },
+            { key: "desc",  label: "Description", type: "textarea" },
+            { key: "date",  label: "Date prévue", type: "date" },
+          ]}
+          onClose={() => setModal(false)}
+          onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Films ----
+function FilmsTab({ spaceId, user, members }) {
+  const [modal, setModal]   = useState(false);
+  const [filter, setFilter] = useState("all");
+  const path  = spaceId ? `spaces/${spaceId}/films` : null;
+  const films = useCollection(path);
+
+  const add    = (form) => db.collection(path).add({ title: form.title, genre: form.genre || "", desc: form.desc || "", by: user.uid, watched: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const toggle = (id, watched) => db.collection(path).doc(id).update({ watched: !watched });
+  const del    = (id)          => db.collection(path).doc(id).delete();
+
+  const filtered = filter === "all" ? films : filter === "watched" ? films.filter(f => f.watched) : films.filter(f => !f.watched);
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Films 🎬</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {films.filter(f => !f.watched).length} film{films.filter(f => !f.watched).length > 1 ? "s" : ""} à voir
+        </p>
+      </div>
+
+      <div className="p-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {[["all","Tous"],["unwatched","À voir"],["watched","Vus ✓"]].map(([v,l]) => (
+            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
+          ))}
+        </div>
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter un film
+        </button>
+
+        {filtered.length === 0
+          ? <EmptyState emoji="🎬" text="Aucun film ici !" />
+          : filtered.map(film => (
+            <div key={film.id} className="card p-4 mb-3" style={film.watched ? { opacity: 0.5 } : {}}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`font-semibold ${film.watched ? "line-through" : ""}`} style={{ color: film.watched ? "var(--inactive)" : "var(--text)" }}>{film.title}</span>
+                    <UserBadge uid={film.by} members={members} />
+                  </div>
+                  {film.genre && <span className="inline-block text-xs px-2 py-0.5 rounded-full mb-1" style={{ background: "#2d1a40", color: "#d8b4fe" }}>{film.genre}</span>}
+                  {film.desc  && <p className="text-sm" style={{ color: "var(--secondary)" }}>{film.desc}</p>}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button onClick={() => toggle(film.id, film.watched)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                    style={film.watched ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                    {film.watched ? "✓" : "○"}
+                  </button>
+                  <button onClick={() => del(film.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      {modal && (
+        <AddModal title="Nouveau film 🎬"
+          fields={[
+            { key: "title", label: "Titre du film", required: true },
+            { key: "genre", label: "Genre", placeholder: "Action, Comédie, Horreur…" },
+            { key: "desc",  label: "Note", type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Musique ----
+function MusiqueTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path     = spaceId ? `spaces/${spaceId}/musique` : null;
+  const musiques = useCollection(path);
+
+  const add        = (form) => db.collection(path).add({ title: form.title, artist: form.artist || "", mood: form.mood || "", by: user.uid, liked: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const toggleLike = (id, liked) => db.collection(path).doc(id).update({ liked: !liked });
+  const del        = (id)        => db.collection(path).doc(id).delete();
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Musique 🎵</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {musiques.length} morceau{musiques.length > 1 ? "x" : ""}
+        </p>
+      </div>
+
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter un morceau
+        </button>
+
+        {musiques.length === 0
+          ? <EmptyState emoji="🎵" text="La liste est vide !" />
+          : musiques.map(m => (
+            <div key={m.id} className="card p-4 mb-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{m.title}</span>
+                    <UserBadge uid={m.by} members={members} />
+                  </div>
+                  {m.artist && <p className="text-sm" style={{ color: "var(--secondary)" }}>🎤 {m.artist}</p>}
+                  {m.mood   && <p className="text-xs mt-1" style={{ color: "var(--grad2)" }}>{m.mood}</p>}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button onClick={() => toggleLike(m.id, m.liked)} className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: m.liked ? "#3d1830" : "var(--input-bg)", fontSize: "1rem" }}>
+                    {m.liked ? "❤️" : "🤍"}
+                  </button>
+                  <button onClick={() => del(m.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      {modal && (
+        <AddModal title="Nouveau morceau 🎵"
+          fields={[
+            { key: "title",  label: "Titre",    required: true },
+            { key: "artist", label: "Artiste",  placeholder: "" },
+            { key: "mood",   label: "Ambiance", placeholder: "Ex: chill, hype, sad…" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Jeux ----
+function JeuxTab({ spaceId, user, members }) {
+  const [modal, setModal]   = useState(false);
+  const [filter, setFilter] = useState("all");
+  const path = spaceId ? `spaces/${spaceId}/jeux` : null;
+  const jeux = useCollection(path);
+
+  const add    = (form) => db.collection(path).add({ title: form.title, type: form.type || "", desc: form.desc || "", by: user.uid, played: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const toggle = (id, played) => db.collection(path).doc(id).update({ played: !played });
+  const del    = (id)         => db.collection(path).doc(id).delete();
+
+  const filtered = filter === "all" ? jeux : filter === "played" ? jeux.filter(j => j.played) : jeux.filter(j => !j.played);
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Jeux 🎮</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {jeux.filter(j => !j.played).length} jeu{jeux.filter(j => !j.played).length > 1 ? "x" : ""} à faire
+        </p>
+      </div>
+
+      <div className="p-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {[["all","Tous"],["unplayed","À faire"],["played","Faits ✓"]].map(([v,l]) => (
+            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
+          ))}
+        </div>
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter un jeu
+        </button>
+
+        {filtered.length === 0
+          ? <EmptyState emoji="🎮" text="Aucun jeu ici !" />
+          : filtered.map(jeu => (
+            <div key={jeu.id} className="card p-4 mb-3" style={jeu.played ? { opacity: 0.5 } : {}}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`font-semibold ${jeu.played ? "line-through" : ""}`} style={{ color: jeu.played ? "var(--inactive)" : "var(--text)" }}>{jeu.title}</span>
+                    <UserBadge uid={jeu.by} members={members} />
+                  </div>
+                  {jeu.type && <span className="inline-block text-xs px-2 py-0.5 rounded-full mb-1" style={{ background: "#1a3a2a", color: "#4ade80" }}>{jeu.type}</span>}
+                  {jeu.desc && <p className="text-sm" style={{ color: "var(--secondary)" }}>{jeu.desc}</p>}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button onClick={() => toggle(jeu.id, jeu.played)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                    style={jeu.played ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                    {jeu.played ? "✓" : "○"}
+                  </button>
+                  <button onClick={() => del(jeu.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      {modal && (
+        <AddModal title="Nouveau jeu 🎮"
+          fields={[
+            { key: "title", label: "Nom du jeu", required: true },
+            { key: "type",  label: "Type", placeholder: "Coop, Solo, Compétitif…" },
+            { key: "desc",  label: "Note", type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Idées ----
+function IdeesTab({ spaceId, user, members }) {
+  const [modal, setModal]   = useState(false);
+  const [filter, setFilter] = useState("all");
+  const path  = spaceId ? `spaces/${spaceId}/idees` : null;
+  const idees = useCollection(path);
+
+  const add    = (form) => db.collection(path).add({ title: form.title, desc: form.desc || "", by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
+  const del    = (id)       => db.collection(path).doc(id).delete();
+
+  const filtered = filter === "all" ? idees : filter === "done" ? idees.filter(i => i.done) : idees.filter(i => !i.done);
+
+  return (
+    <div className="px-4 pt-4 pb-32">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold">Idées ⭐</h2>
+        <button onClick={() => setModal(true)} className="gradient-bg text-white text-sm font-semibold px-3 py-2 rounded-xl flex items-center gap-1">
+          <span className="text-base">+</span> Ajouter
+        </button>
+      </div>
+      <div className="flex gap-2 mb-4">
+        {[["all","Toutes"],["todo","À faire"],["done","Réalisées ✓"]].map(([v,l]) => (
+          <button key={v} onClick={() => setFilter(v)} className={`filter-btn px-3 py-1 rounded-full text-xs font-medium transition-all ${filter === v ? "active" : ""}`}>{l}</button>
+        ))}
+      </div>
+
+      {filtered.length === 0
+        ? <EmptyState emoji="⭐" text="pas d'idée" />
+        : filtered.map(idee => (
+          <div key={idee.id} className="card p-4 mb-3" style={idee.done ? { opacity: 0.45 } : {}}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className={`font-semibold ${idee.done ? "line-through" : ""}`} style={{ color: idee.done ? "var(--inactive)" : "var(--text)" }}>{idee.title}</span>
+                  <UserBadge uid={idee.by} members={members} />
+                </div>
+                {idee.desc && <p className="text-sm" style={{ color: "var(--secondary)" }}>{idee.desc}</p>}
+              </div>
+              <div className="flex flex-col gap-1">
+                <button onClick={() => toggle(idee.id, idee.done)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                  style={idee.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                  {idee.done ? "✓" : "○"}
+                </button>
+                <button onClick={() => del(idee.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+              </div>
+            </div>
+          </div>
+        ))
+      }
+
+      {modal && (
+        <AddModal title="Nouvelle idée ⭐"
+          fields={[
+            { key: "title", label: "Idée",        required: true },
+            { key: "desc",  label: "Description", type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ================================================================
+//  ONGLETS COWORKING
+// ================================================================
+
+// ---- Tâches ----
+function TachesTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const path  = spaceId ? `spaces/${spaceId}/taches` : null;
+  const items = useCollection(path);
+
+  const add    = (form) => db.collection(path).add({
+    title: form.title, desc: form.desc || "", priority: form.priority || "normal",
+    by: user.uid, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const toggle = (id, done) => db.collection(path).doc(id).update({ done: !done });
+  const del    = (id)       => db.collection(path).doc(id).delete();
+
+  const filtered = filter === "all" ? items : filter === "done" ? items.filter(i => i.done) : items.filter(i => !i.done);
+  const priorityStyle = (p) => p === "urgent" ? { bg: "#3d1515", color: "#f87171" } : p === "bas" ? { bg: "#0b2e26", color: "#5eead4" } : { bg: "#2d1a0b", color: "#fcd34d" };
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Tâches ✅</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {items.filter(i => !i.done).length} tâche{items.filter(i => !i.done).length !== 1 ? "s" : ""} en cours
+        </p>
+      </div>
+      <div className="p-4">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {[["all","Toutes"],["todo","À faire"],["done","Faites ✓"]].map(([v,l]) => (
+            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
+          ))}
+        </div>
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter une tâche
+        </button>
+        {filtered.length === 0
+          ? <EmptyState emoji="✅" text="Aucune tâche ici !" />
+          : filtered.map(item => {
+              const ps = priorityStyle(item.priority);
+              return (
+                <div key={item.id} className="card p-4 mb-3" style={item.done ? { opacity: 0.45 } : {}}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
+                        <UserBadge uid={item.by} members={members} />
+                        {item.priority && item.priority !== "normal" && (
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: ps.bg, color: ps.color }}>{item.priority}</span>
+                        )}
+                      </div>
+                      {item.desc && <p className="text-sm" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => toggle(item.id, item.done)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                        style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
+                        {item.done ? "✓" : "○"}
+                      </button>
+                      <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouvelle tâche ✅"
+          fields={[
+            { key: "title",    label: "Titre",    required: true, placeholder: "Que faut-il faire ?" },
+            { key: "desc",     label: "Détails",  type: "textarea" },
+            { key: "priority", label: "Priorité", placeholder: "urgent / normal / bas" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Projets ----
+function ProjetsTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/projets` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, desc: form.desc || "", status: "actif",
+    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const cycleStatus = (id, status) => {
+    const next = status === "actif" ? "pause" : status === "pause" ? "terminé" : "actif";
+    db.collection(path).doc(id).update({ status: next });
+  };
+  const del = (id) => db.collection(path).doc(id).delete();
+
+  const statusStyle = (s) => s === "terminé" ? { bg: "#1a3a2a", color: "#4ade80" } : s === "pause" ? { bg: "#2d1a0b", color: "#fcd34d" } : { bg: "#1a2e40", color: "#60a5fa" };
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Projets 📁</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+          {items.filter(i => i.status === "actif").length} projet{items.filter(i => i.status === "actif").length !== 1 ? "s" : ""} actif{items.filter(i => i.status === "actif").length !== 1 ? "s" : ""}
+        </p>
+      </div>
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Nouveau projet
+        </button>
+        {items.length === 0
+          ? <EmptyState emoji="📁" text="Aucun projet pour l'instant" />
+          : items.map(item => {
+              const ss = statusStyle(item.status);
+              return (
+                <div key={item.id} className="card p-4 mb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                        <UserBadge uid={item.by} members={members} />
+                      </div>
+                      {item.desc && <p className="text-sm mb-2" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                      <button onClick={() => cycleStatus(item.id, item.status)} className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: ss.bg, color: ss.color }}>
+                        {item.status || "actif"}
+                      </button>
+                    </div>
+                    <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                      style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+                  </div>
+                </div>
+              );
+            })
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouveau projet 📁"
+          fields={[
+            { key: "title", label: "Nom du projet", required: true },
+            { key: "desc",  label: "Description",   type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Notes ----
+function NotesTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/notes` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, content: form.content || "",
+    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const del = (id) => db.collection(path).doc(id).delete();
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Notes 💬</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} note{items.length !== 1 ? "s" : ""}</p>
+      </div>
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Nouvelle note
+        </button>
+        {items.length === 0
+          ? <EmptyState emoji="💬" text="Aucune note partagée" />
+          : items.map(item => (
+            <div key={item.id} className="card p-4 mb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                    <UserBadge uid={item.by} members={members} />
+                  </div>
+                  {item.content && <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--secondary)" }}>{item.content}</p>}
+                </div>
+                <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouvelle note 💬"
+          fields={[
+            { key: "title",   label: "Titre",   required: true },
+            { key: "content", label: "Contenu", type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Liens ----
+function LiensTab({ spaceId, user, members }) {
+  const [modal, setModal] = useState(false);
+  const path  = spaceId ? `spaces/${spaceId}/liens` : null;
+  const items = useCollection(path);
+
+  const add = (form) => db.collection(path).add({
+    title: form.title, url: form.url || "", desc: form.desc || "",
+    by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  const del = (id) => db.collection(path).doc(id).delete();
+
+  const formatUrl = (url) => {
+    try { return new URL(url.startsWith("http") ? url : "https://" + url).hostname; }
+    catch { return url; }
+  };
+
+  return (
+    <div className="pb-24">
+      <div className="gradient-bg p-6">
+        <h2 className="text-white font-bold text-xl mb-1">Liens 🔗</h2>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} ressource{items.length !== 1 ? "s" : ""}</p>
+      </div>
+      <div className="p-4">
+        <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+          <span className="text-xl">+</span> Ajouter un lien
+        </button>
+        {items.length === 0
+          ? <EmptyState emoji="🔗" text="Aucun lien partagé" />
+          : items.map(item => (
+            <div key={item.id} className="card p-4 mb-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                    <UserBadge uid={item.by} members={members} />
+                  </div>
+                  {item.url && (
+                    <a href={item.url.startsWith("http") ? item.url : "https://" + item.url} target="_blank" rel="noopener noreferrer"
+                      className="text-sm underline block mb-1" style={{ color: "var(--accent)" }}>
+                      🌐 {formatUrl(item.url)}
+                    </a>
+                  )}
+                  {item.desc && <p className="text-xs" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
+                </div>
+                <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      {modal && (
+        <AddModal title="Nouveau lien 🔗"
+          fields={[
+            { key: "title", label: "Titre",       required: true, placeholder: "Ex: Figma du projet" },
+            { key: "url",   label: "URL",          placeholder: "https://…" },
+            { key: "desc",  label: "Description",  type: "textarea" },
+          ]}
+          onClose={() => setModal(false)} onSave={add}
+        />
+      )}
+    </div>
+  );
+}
+
+// ================================================================
+//  ESPACE — vue principale
+// ================================================================
+function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeChange }) {
+  const spaceMode = space?.mode || "social";
+  const [activeTab,  setActiveTab]  = useState(spaceMode === "coworking" ? "taches" : "activites");
+  const [showInfo,   setShowInfo]   = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [liveSpace,  setLiveSpace]  = useState(space);
+  const [copied,     setCopied]     = useState(false);
+
+  useEffect(() => {
+    const unsub = db.collection("spaces").doc(space.id).onSnapshot(doc => {
+      if (doc.exists) setLiveSpace({ id: doc.id, ...doc.data() });
+    });
+    return unsub;
+  }, [space.id]);
+
+  const members = liveSpace?.members || [];
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(liveSpace?.inviteCode || "").then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen">
+      {/* Header sticky */}
+      <div className="gradient-bg px-4 pt-4 pb-2 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-white/80 text-2xl leading-none">‹</button>
+          <div>
+            <h1 className="text-white font-bold text-base leading-tight">{liveSpace?.name}</h1>
+            <div className="flex items-center gap-1">
+              {members.map(m => <span key={m.uid} className="text-sm">{m.emoji}</span>)}
+              <span className="text-white/60 text-xs ml-1">{members.length} membre{members.length > 1 ? "s" : ""}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowSettings(true)} className="text-white/70 px-2 py-1 rounded-full text-base"
+            style={{ background: "rgba(0,0,0,0.25)" }}>⚙️</button>
+          <button onClick={() => setShowInfo(true)} className="text-white/70 px-2.5 py-1 rounded-full text-sm font-bold"
+            style={{ background: "rgba(0,0,0,0.25)" }}>⋯</button>
+        </div>
+      </div>
+
+      {/* Contenu selon onglet actif */}
+      {spaceMode === "coworking" ? (
+        <>
+          {activeTab === "taches"  && <TachesTab  spaceId={space.id} user={user} members={members} />}
+          {activeTab === "projets" && <ProjetsTab spaceId={space.id} user={user} members={members} />}
+          {activeTab === "notes"   && <NotesTab   spaceId={space.id} user={user} members={members} />}
+          {activeTab === "liens"   && <LiensTab   spaceId={space.id} user={user} members={members} />}
+        </>
+      ) : (
+        <>
+          {activeTab === "activites" && <ActivitesTab spaceId={space.id} user={user} members={members} />}
+          {activeTab === "idees"     && <IdeesTab     spaceId={space.id} user={user} members={members} />}
+          {activeTab === "films"     && <FilmsTab     spaceId={space.id} user={user} members={members} />}
+          {activeTab === "musique"   && <MusiqueTab   spaceId={space.id} user={user} members={members} />}
+          {activeTab === "jeux"      && <JeuxTab      spaceId={space.id} user={user} members={members} />}
+        </>
+      )}
+
+      {/* Barre de navigation en bas */}
+      <div className="bottom-nav">
+        <div className="flex">
+          {(spaceMode === "coworking" ? COWORK_TABS : TABS).map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
+              <span className="text-xl">{tab.emoji}</span>
+              <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
+              {activeTab === tab.id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Modal infos espace */}
+      {showInfo && (
+        <div className="modal-overlay" onClick={() => setShowInfo(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg">{liveSpace?.name}</h3>
+              <button onClick={() => setShowInfo(false)} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
+            </div>
+
+            <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--secondary)" }}>Code d'invitation</p>
+            <button onClick={copyCode} className="w-full rounded-xl p-4 mb-5 flex items-center justify-between" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+              <span className="text-2xl font-bold tracking-widest text-white">{liveSpace?.inviteCode}</span>
+              <span className="text-sm" style={{ color: copied ? "#4ade80" : "var(--secondary)" }}>{copied ? "Copié ✓" : "Copier"}</span>
+            </button>
+
+            <p className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--secondary)" }}>Membres ({members.length})</p>
+            {members.map((m, i) => (
+              <div key={m.uid} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
+                <span className="text-2xl">{m.emoji}</span>
+                <div className="flex-1">
+                  <span className="font-medium">{m.name}</span>
+                  {m.uid === user.uid && <span className="text-xs ml-2" style={{ color: "var(--inactive)" }}>(moi)</span>}
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: badgeStyle(i).bg, color: badgeStyle(i).text }}>
+                  {m.emoji}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal paramètres */}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          user={user}
+          currentThemeId={currentThemeId}
+          onThemeChange={onThemeChange}
+        />
+      )}
+    </div>
+  );
+}
+
+// ================================================================
+//  APP ROOT
+// ================================================================
+function App() {
+  const [user,         setUser]         = useState(undefined);
+  const [userData,     setUserData]     = useState(null);
+  const [currentSpace, setCurrentSpace] = useState(null);
+  const [themeId,      setThemeId]      = useState("mauve");
+
+  // Init thème depuis localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('planio-theme');
+    const theme = THEMES.find(t => t.id === saved) || THEMES[0];
+    setThemeId(theme.id);
+    applyTheme(theme);
+  }, []);
+
+  useEffect(() => {
+    return auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u) {
+        const doc = await db.collection("users").doc(u.uid).get();
+        if (doc.exists) setUserData(doc.data());
+      } else {
+        setUserData(null);
+      }
+    });
+  }, []);
+
+  const handleThemeChange = (theme) => {
+    setThemeId(theme.id);
+    applyTheme(theme);
+  };
+
+  if (user === undefined) return <Spinner />;
+  if (!user) return <AuthScreen onDone={setUser} />;
+
+  if (!currentSpace) return (
+    <HomeScreen
+      user={user}
+      userData={userData}
+      onEnterSpace={setCurrentSpace}
+      currentThemeId={themeId}
+      onThemeChange={handleThemeChange}
+    />
+  );
+
+  return (
+    <SpaceScreen
+      user={user}
+      userData={userData}
+      space={currentSpace}
+      onBack={() => setCurrentSpace(null)}
+      currentThemeId={themeId}
+      onThemeChange={handleThemeChange}
+    />
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
 </html>
