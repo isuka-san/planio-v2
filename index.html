@@ -167,8 +167,9 @@ const TABS = [
 const COWORK_TABS = [
   { id: "taches",  label: "Tâches",  emoji: "✅" },
   { id: "projets", label: "Projets", emoji: "📁" },
-  { id: "notes",   label: "Notes",   emoji: "💬" },
+  { id: "notes",   label: "Notes",   emoji: "📝" },
   { id: "liens",   label: "Liens",   emoji: "🔗" },
+  { id: "chat",    label: "Chat",    emoji: "💬" },
 ];
 
 const SPACE_MODES = [
@@ -1514,6 +1515,179 @@ function LiensTab({ spaceId, user, members }) {
 }
 
 // ================================================================
+//  COWORKING — Chat temps réel
+// ================================================================
+function ChatTab({ spaceId, user, userData, members }) {
+  const [messages, setMessages] = React.useState([]);
+  const [text, setText]         = React.useState("");
+  const [sending, setSending]   = React.useState(false);
+  const bottomRef               = React.useRef(null);
+  const path = spaceId ? `spaces/${spaceId}/chat` : null;
+
+  React.useEffect(() => {
+    if (!path) return;
+    const unsub = db.collection(path)
+      .orderBy("createdAt", "asc")
+      .onSnapshot(
+        snap => setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+        err  => console.error("Chat error:", err)
+      );
+    return () => unsub();
+  }, [path]);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const send = async () => {
+    const t = text.trim();
+    if (!t || !path) return;
+    setSending(true);
+    setText("");
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      await db.collection(path).add({
+        text: t,
+        authorId:    user.uid,
+        authorName:  userData?.name  || user.displayName || "Moi",
+        authorEmoji: userData?.emoji || "🦖",
+        day:         today,
+        createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch(e) { console.error(e); setText(t); }
+    setSending(false);
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  // Grouper par jour
+  const grouped = messages.reduce((acc, msg) => {
+    const day = msg.day || msg.createdAt?.toDate?.()?.toISOString?.()?.slice(0,10) || "?";
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(msg);
+    return acc;
+  }, {});
+
+  const formatDay = (d) => {
+    const today     = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    if (d === today)     return "Aujourd'hui";
+    if (d === yesterday) return "Hier";
+    try { return new Date(d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }); }
+    catch { return d; }
+  };
+
+  const isMe = (msg) => msg.authorId === user.uid;
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"calc(100vh - 130px)" }}>
+
+      {/* Liste des messages */}
+      <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
+        {messages.length === 0 && (
+          <div style={{ textAlign:"center", padding:"56px 16px" }}>
+            <div style={{ fontSize:"2.5rem", marginBottom:"8px" }}>💬</div>
+            <p style={{ color:"var(--secondary)", fontSize:"0.9rem", lineHeight:"1.6" }}>
+              Pas encore de messages.<br/>Soyez les premiers à écrire !
+            </p>
+          </div>
+        )}
+
+        {Object.entries(grouped).map(([day, msgs]) => (
+          <div key={day}>
+            {/* Séparateur de jour */}
+            <div style={{ display:"flex", alignItems:"center", gap:"8px", margin:"18px 0 12px" }}>
+              <div style={{ flex:1, height:"1px", background:"var(--border)" }} />
+              <span style={{ fontSize:"0.7rem", color:"var(--secondary)", fontWeight:600, whiteSpace:"nowrap",
+                background:"var(--bg)", padding:"0 6px", borderRadius:"6px", border:"1px solid var(--border)" }}>
+                {formatDay(day)}
+              </span>
+              <div style={{ flex:1, height:"1px", background:"var(--border)" }} />
+            </div>
+
+            {msgs.map((msg, i) => {
+              const me = isMe(msg);
+              const showAuthor = !me && (i === 0 || msgs[i-1]?.authorId !== msg.authorId);
+              return (
+                <div key={msg.id} style={{ display:"flex", flexDirection: me ? "row-reverse" : "row",
+                  alignItems:"flex-end", gap:"8px", marginBottom:"5px" }}>
+                  {/* Avatar côté gauche (autres membres) */}
+                  {!me && (
+                    <div style={{ width:"32px", height:"32px", borderRadius:"50%", background:"var(--input-bg)",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:"1.1rem", flexShrink:0, border:"1px solid var(--border)",
+                      opacity: showAuthor ? 1 : 0 }}>
+                      {msg.authorEmoji || "🦖"}
+                    </div>
+                  )}
+                  <div style={{ maxWidth:"72%", display:"flex", flexDirection:"column",
+                    alignItems: me ? "flex-end" : "flex-start" }}>
+                    {showAuthor && !me && (
+                      <span style={{ fontSize:"0.7rem", color:"var(--secondary)", marginBottom:"3px", paddingLeft:"4px" }}>
+                        {msg.authorName}
+                      </span>
+                    )}
+                    <div style={{
+                      background: me ? "var(--accent)" : "var(--card)",
+                      border: me ? "none" : "1px solid var(--border)",
+                      borderRadius: me ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                      padding:"9px 13px", fontSize:"0.9rem",
+                      color: me ? "white" : "var(--text)",
+                      wordBreak:"break-word", lineHeight:"1.45",
+                    }}>
+                      {msg.text}
+                    </div>
+                    <span style={{ fontSize:"0.65rem", color:"var(--secondary)", marginTop:"2px",
+                      paddingLeft:"4px", paddingRight:"4px" }}>
+                      {msg.createdAt?.toDate?.()?.toLocaleTimeString("fr-FR",
+                        { hour:"2-digit", minute:"2-digit" }) || ""}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Zone de saisie */}
+      <div style={{ borderTop:"1px solid var(--border)", padding:"10px 16px",
+        paddingBottom:"calc(10px + env(safe-area-inset-bottom))", background:"var(--nav-bg)" }}>
+        <div style={{ display:"flex", gap:"8px", alignItems:"flex-end" }}>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Écrire un message…"
+            rows={1}
+            style={{ flex:1, borderRadius:"18px", border:"1px solid var(--input-border)",
+              padding:"10px 14px", resize:"none", fontSize:"0.9rem", lineHeight:"1.4",
+              maxHeight:"80px", overflow:"auto",
+              background:"var(--input-bg)", color:"var(--text)" }}
+          />
+          <button
+            onClick={send}
+            disabled={!text.trim() || sending}
+            style={{ width:"40px", height:"40px", borderRadius:"50%",
+              background: text.trim() ? "var(--accent)" : "var(--input-bg)",
+              border:"1px solid var(--input-border)", cursor: text.trim() ? "pointer" : "default",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:"1rem", flexShrink:0, transition:"background 0.2s, border-color 0.2s",
+              borderColor: text.trim() ? "transparent" : "var(--input-border)",
+              color: text.trim() ? "white" : "var(--secondary)" }}
+          >
+            {sending ? "…" : "➤"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
 //  FOCUS — graphique 7 jours (SVG pur)
 // ================================================================
 function HabitsGraph({ history }) {
@@ -1955,6 +2129,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
           {activeTab === "projets" && <ProjetsTab spaceId={space.id} user={user} members={members} />}
           {activeTab === "notes"   && <NotesTab   spaceId={space.id} user={user} members={members} />}
           {activeTab === "liens"   && <LiensTab   spaceId={space.id} user={user} members={members} />}
+          {activeTab === "chat"    && <ChatTab    spaceId={space.id} user={user} userData={userData} members={members} />}
         </>
       ) : (
         <>
