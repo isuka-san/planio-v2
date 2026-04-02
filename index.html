@@ -13,7 +13,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Tailwind -->
+  <!-- Tailwind -->h
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Firebase 9 (compat mode — pas besoin de build) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -2876,7 +2876,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
       )}
 
       {/* Barre de navigation en bas (cachée en mode Focus) */}
-      {<div className="bottom-nav">
+      <div className="bottom-nav">
           {spaceModules.length <= 4 ? (
             /* Mode normal : ≤ 4 modules */
             <div className="flex">
