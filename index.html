@@ -97,7 +97,7 @@ const db   = firebase.firestore();
 // ── FCM Push Notifications ──────────────────────────────────────
 // ⚠️  Remplis ta VAPID key : Firebase Console → Project Settings
 //     → Cloud Messaging → Web Push certificates → Generate/Copy key pair
-const VAPID_KEY = "BEgkKzE2hnal-LmeyQMmAgiIZK0vh-hJuuCOZyrrwCaO2DBEgjwD9xUThnGu1Lt_MkPF0Fjdnd4GftFLsmlYZA8"; // ← colle ta clé ici
+const VAPID_KEY = "BEgkKzE2hnal-LmeyQMmAgiIZK0vh-hJuuCOZyrrwCaO2DBEgjwD9xUThnGu1Lt_MkPF0Fjdnd4GftFLsmlYZA8";
 let messaging = null;
 try { if (typeof firebase.messaging === "function") messaging = firebase.messaging(); } catch(e) {}
 
@@ -796,103 +796,351 @@ function ActivitesTab({ spaceId, user, members }) {
   );
 }
 
-// ---- Films ----
+// ---- Films & Séries ----
 function FilmsTab({ spaceId, user, members }) {
-  const [modal, setModal]       = useState(false);
-  const [filter, setFilter]     = useState("all");
-  const [editItem, setEditItem] = useState(null);
+  const [modal,        setModal]        = useState(false);
+  const [editItem,     setEditItem]     = useState(null);
+  const [progressItem, setProgressItem] = useState(null);
+  const [filter,       setFilter]       = useState("all");
+  const { showConfirm, ConfirmModal } = useConfirm();
   const path  = spaceId ? `spaces/${spaceId}/films` : null;
-  const films = useCollection(path);
+  const items = useCollection(path);
+
+  const fmtTime = (m) => {
+    if (!m && m !== 0) return "—";
+    return m < 60 ? `${m}min` : `${Math.floor(m / 60)}h${m % 60 > 0 ? String(m % 60).padStart(2, "0") : ""}`;
+  };
+
+  const getProgress = (item) => {
+    if (item.type === "serie") {
+      const total = (item.totalSeasons || 1) * (item.episodesPerSeason || 1);
+      const done  = ((item.currentSeason || 1) - 1) * (item.episodesPerSeason || 1) + (item.currentEpisode || 0);
+      return total > 0 ? Math.min(100, Math.round(done / total * 100)) : 0;
+    }
+    const dur = item.duration || 0;
+    return dur > 0 ? Math.min(100, Math.round((item.watchedMinutes || 0) / dur * 100)) : 0;
+  };
+
+  const update = async (id, data) => {
+    try { await db.collection(path).doc(id).update(data); }
+    catch(e) { console.error("update:", e); }
+  };
 
   const add = async (form) => {
-    try { await db.collection(path).add({ title: form.title, genre: form.genre || "", desc: form.desc || "", by: user.uid, watched: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
-    catch(e) { console.error('Erreur ajout:', e); alert('Erreur lors de l\'ajout. Réessaie.'); }
-  };
-  const edit = async (id, form) => {
-    try { await db.collection(path).doc(id).update({ title: form.title, genre: form.genre || "", desc: form.desc || "" }); }
-    catch(e) { console.error('Erreur modif:', e); alert('Erreur lors de la modification. Réessaie.'); }
-  };
-  const toggle = async (id, watched) => {
-    try { await db.collection(path).doc(id).update({ watched: !watched }); }
-    catch(e) { console.error('Erreur toggle:', e); }
-  };
-  const del = async (id) => {
-    if (!window.confirm('Supprimer cet élément ?')) return;
-    try { await db.collection(path).doc(id).delete(); }
-    catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
+    const doc = {
+      type: form.type || "film",
+      title: form.title, genre: form.genre || "", desc: form.desc || "",
+      completed: false, by: user.uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    if (doc.type === "serie") {
+      doc.totalSeasons = Number(form.totalSeasons) || 1;
+      doc.episodesPerSeason = Number(form.episodesPerSeason) || 1;
+      doc.currentSeason = 1; doc.currentEpisode = 0;
+    } else {
+      doc.duration = Number(form.duration) || 0;
+      doc.watchedMinutes = 0;
+    }
+    try { await db.collection(path).add(doc); }
+    catch(e) { console.error("add:", e); }
   };
 
-  const filtered = filter === "all" ? films : filter === "watched" ? films.filter(f => f.watched) : films.filter(f => !f.watched);
+  const nextEp = async (item) => {
+    let s = item.currentSeason || 1, e = (item.currentEpisode || 0) + 1;
+    if (e > (item.episodesPerSeason || 1)) { e = 1; s++; }
+    const done = s > (item.totalSeasons || 1);
+    await update(item.id, {
+      currentSeason: done ? item.totalSeasons : s,
+      currentEpisode: done ? item.episodesPerSeason : e,
+      completed: done,
+    });
+  };
+
+  const del = async (id) => {
+    const ok = await showConfirm("Supprimer cet élément ?");
+    if (!ok) return;
+    try { await db.collection(path).doc(id).delete(); }
+    catch(e) { console.error("del:", e); }
+  };
+
+  const filtered = items.filter(i => {
+    if (filter === "progress") return !i.completed && getProgress(i) > 0;
+    if (filter === "todo")     return !i.completed && getProgress(i) === 0;
+    if (filter === "done")     return i.completed;
+    return true;
+  });
+
+  const inProgress = items.filter(i => !i.completed && getProgress(i) > 0).length;
 
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Films 🎬</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Films & Séries 🎬</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
-          {films.filter(f => !f.watched).length} film{films.filter(f => !f.watched).length > 1 ? "s" : ""} à voir
+          {inProgress > 0
+            ? `${inProgress} en cours · ${items.filter(i => !i.completed).length - inProgress} à voir`
+            : `${items.filter(i => !i.completed).length} à voir`}
         </p>
       </div>
 
       <div className="p-4">
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {[["all","Tous"],["unwatched","À voir"],["watched","Vus ✓"]].map(([v,l]) => (
-            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all filter-btn ${filter === v ? "active" : ""}`}>{l}</button>
+          {[["all","Tous"],["progress","En cours"],["todo","À voir"],["done","Vus ✓"]].map(([v,l]) => (
+            <button key={v} onClick={() => setFilter(v)} className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap filter-btn ${filter===v?"active":""}`}>{l}</button>
           ))}
         </div>
         <button onClick={() => setModal(true)} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
-          <span className="text-xl">+</span> Ajouter un film
+          <span className="text-xl">+</span> Ajouter
         </button>
 
         {filtered.length === 0
-          ? <EmptyState emoji="🎬" text="Aucun film ici !" />
-          : filtered.map(film => (
-            <div key={film.id} className="card p-4 mb-3" style={film.watched ? { opacity: 0.5 } : {}}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`font-semibold ${film.watched ? "line-through" : ""}`} style={{ color: film.watched ? "var(--inactive)" : "var(--text)" }}>{film.title}</span>
-                    <UserBadge uid={film.by} members={members} />
+          ? <EmptyState emoji="🎬" text="Rien ici !" />
+          : filtered.map(item => {
+            const pct     = getProgress(item);
+            const isSerie = item.type === "serie";
+            return (
+              <div key={item.id} className="card p-4 mb-3" style={item.completed ? { opacity: 0.55 } : {}}>
+                {/* En-tête */}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <span>{isSerie ? "📺" : "🎬"}</span>
+                      <span className={`font-semibold text-sm leading-tight ${item.completed?"line-through":""}`}
+                        style={{ color: item.completed ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
+                      <UserBadge uid={item.by} members={members} />
+                    </div>
+                    {item.genre && <span className="inline-block text-xs px-2 py-0.5 rounded-full mt-0.5" style={{ background:"#2d1a40", color:"#d8b4fe" }}>{item.genre}</span>}
                   </div>
-                  {film.genre && <span className="inline-block text-xs px-2 py-0.5 rounded-full mb-1" style={{ background: "#2d1a40", color: "#d8b4fe" }}>{film.genre}</span>}
-                  {film.desc  && <p className="text-sm" style={{ color: "var(--secondary)" }}>{film.desc}</p>}
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => update(item.id, { completed: !item.completed })}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                      style={item.completed ? { background:"#1a3a2a", color:"#4ade80" } : { background:"var(--input-bg)", color:"var(--inactive)" }}>
+                      {item.completed ? "✓" : "○"}
+                    </button>
+                    <button onClick={() => setEditItem(item)} className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                      style={{ background:"var(--input-bg)", color:"var(--secondary)" }}>✎</button>
+                    <button onClick={() => del(item.id)} className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                      style={{ background:"#2d1520", color:"#f87171" }}>✕</button>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => toggle(film.id, film.watched)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                    style={film.watched ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
-                    {film.watched ? "✓" : "○"}
-                  </button>
-                  <button onClick={() => setEditItem(film)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
-                  <button onClick={() => del(film.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
-                </div>
+
+                {/* Barre de progression */}
+                {!item.completed && (
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs" style={{ color:"var(--secondary)" }}>
+                        {isSerie
+                          ? `S${String(item.currentSeason||1).padStart(2,"0")}E${String(item.currentEpisode||0).padStart(2,"0")} · ${item.totalSeasons}S × ${item.episodesPerSeason}ep`
+                          : `${fmtTime(item.watchedMinutes||0)} / ${fmtTime(item.duration)}`}
+                      </span>
+                      <span className="text-xs font-bold" style={{ color: pct > 0 ? "var(--accent)" : "var(--inactive)" }}>{pct}%</span>
+                    </div>
+                    <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background:"var(--input-bg)" }}>
+                      <div className="h-full rounded-full transition-all duration-500 gradient-bg" style={{ width:`${pct}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions rapides */}
+                {!item.completed && (
+                  <div className="flex gap-1.5 mt-2 flex-wrap">
+                    {isSerie ? (
+                      <button onClick={() => nextEp(item)}
+                        className="text-xs px-3 py-1 rounded-lg font-medium"
+                        style={{ background:"var(--input-bg)", color:"var(--accent)", border:"1px solid var(--border)" }}>
+                        +1 ep →
+                      </button>
+                    ) : (
+                      [15,30,60].map(m => (
+                        <button key={m}
+                          onClick={() => update(item.id, { watchedMinutes: Math.min(item.duration||9999, (item.watchedMinutes||0)+m) })}
+                          className="text-xs px-3 py-1 rounded-lg font-medium"
+                          style={{ background:"var(--input-bg)", color:"var(--accent)", border:"1px solid var(--border)" }}>
+                          +{fmtTime(m)}
+                        </button>
+                      ))
+                    )}
+                    <button onClick={() => setProgressItem(item)}
+                      className="text-xs px-3 py-1 rounded-lg font-medium"
+                      style={{ background:"var(--input-bg)", color:"var(--secondary)", border:"1px solid var(--border)" }}>
+                      ✎ modif
+                    </button>
+                  </div>
+                )}
+                {item.desc && <p className="text-xs mt-2" style={{ color:"var(--secondary)" }}>{item.desc}</p>}
               </div>
-            </div>
-          ))
+            );
+          })
         }
       </div>
 
-      {modal && (
-        <AddModal title="Nouveau film 🎬"
-          fields={[
-            { key: "title", label: "Titre du film", required: true },
-            { key: "genre", label: "Genre", placeholder: "Action, Comédie, Horreur…" },
-            { key: "desc",  label: "Note", type: "textarea" },
-          ]}
-          onClose={() => setModal(false)} onSave={add}
-        />
-      )}
+      {ConfirmModal}
+      {modal && <MediaModal onClose={() => setModal(false)} onSave={add} />}
       {editItem && (
-        <AddModal title="Modifier le film ✎"
-          fields={[
-            { key: "title", label: "Titre du film", required: true },
-            { key: "genre", label: "Genre", placeholder: "Action, Comédie, Horreur…" },
-            { key: "desc",  label: "Note", type: "textarea" },
-          ]}
-          initialData={editItem} saveLabel="Enregistrer"
-          onClose={() => setEditItem(null)} onSave={(form) => edit(editItem.id, form)}
-        />
+        <MediaModal isEdit initialData={editItem}
+          onClose={() => setEditItem(null)}
+          onSave={f => update(editItem.id, { title:f.title, genre:f.genre||"", desc:f.desc||"" })} />
       )}
+      {progressItem && (
+        <ProgressModal item={progressItem}
+          onClose={() => setProgressItem(null)}
+          onSave={d => { update(progressItem.id, d); setProgressItem(null); }} />
+      )}
+    </div>
+  );
+}
+
+function MediaModal({ onClose, onSave, initialData, isEdit }) {
+  const [form, setForm] = useState(() => {
+    const base = { type:"film", title:"", genre:"", desc:"", duration:"", totalSeasons:"", episodesPerSeason:"" };
+    if (!initialData) return base;
+    return { ...base, ...initialData,
+      duration: String(initialData.duration || ""),
+      totalSeasons: String(initialData.totalSeasons || ""),
+      episodesPerSeason: String(initialData.episodesPerSeason || "") };
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const isSerie = form.type === "serie";
+  const valid = form.title.trim() && (isEdit || (isSerie ? (form.totalSeasons && form.episodesPerSeason) : form.duration));
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-lg" style={{ color:"var(--text)" }}>{isEdit ? "Modifier ✎" : "Nouveau média"}</h3>
+          <button onClick={onClose} className="text-2xl leading-none" style={{ color:"var(--inactive)" }}>×</button>
+        </div>
+
+        {!isEdit && (
+          <div className="flex gap-2 mb-4">
+            {[["film","🎬 Film"],["serie","📺 Série"]].map(([v,l]) => (
+              <button key={v} onClick={() => set("type",v)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                style={form.type===v
+                  ? { background:"linear-gradient(135deg,var(--grad1),var(--grad2))", color:"white" }
+                  : { background:"var(--input-bg)", color:"var(--secondary)", border:"1px solid var(--border)" }}>
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Titre *</label>
+            <input value={form.title} onChange={e => set("title",e.target.value)}
+              placeholder={isSerie ? "Breaking Bad…" : "Inception…"}
+              className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Genre</label>
+            <input value={form.genre} onChange={e => set("genre",e.target.value)}
+              placeholder="Action, Drame…" className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+          </div>
+
+          {!isEdit && !isSerie && (
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Durée totale (minutes) *</label>
+              <input type="number" value={form.duration} onChange={e => set("duration",e.target.value)}
+                placeholder="148" className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+            </div>
+          )}
+
+          {!isEdit && isSerie && (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Saisons *</label>
+                <input type="number" value={form.totalSeasons} onChange={e => set("totalSeasons",e.target.value)}
+                  placeholder="5" className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Ep/saison *</label>
+                <input type="number" value={form.episodesPerSeason} onChange={e => set("episodesPerSeason",e.target.value)}
+                  placeholder="10" className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Note</label>
+            <textarea value={form.desc} onChange={e => set("desc",e.target.value)}
+              placeholder="Recommandé par…" rows={2}
+              className="w-full rounded-xl px-3 py-2.5 text-sm border resize-none" />
+          </div>
+        </div>
+
+        <button onClick={() => { if (valid) { onSave(form); onClose(); } }}
+          className="w-full mt-5 py-3 rounded-xl font-semibold text-sm"
+          style={valid
+            ? { background:"linear-gradient(135deg,var(--grad1),var(--grad2))", color:"white" }
+            : { background:"var(--input-bg)", color:"var(--inactive)" }}>
+          {isEdit ? "Enregistrer" : "Ajouter"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProgressModal({ item, onClose, onSave }) {
+  const isSerie = item.type === "serie";
+  const [season,  setSeason]  = useState(item.currentSeason || 1);
+  const [episode, setEpisode] = useState(item.currentEpisode || 0);
+  const [mins,    setMins]    = useState(item.watchedMinutes || 0);
+  const fmtTime = m => m < 60 ? `${m}min` : `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,"0"):""}`;
+  const pct = isSerie
+    ? Math.min(100, Math.round(((season-1)*(item.episodesPerSeason||1)+episode) / ((item.totalSeasons||1)*(item.episodesPerSeason||1)) * 100))
+    : Math.min(100, Math.round(mins / (item.duration||1) * 100));
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-lg" style={{ color:"var(--text)" }}>Progression</h3>
+          <button onClick={onClose} className="text-2xl leading-none" style={{ color:"var(--inactive)" }}>×</button>
+        </div>
+        <p className="text-sm font-semibold mb-4" style={{ color:"var(--accent)" }}>{item.title}</p>
+
+        <div className="mb-5">
+          <div className="flex justify-between mb-1.5">
+            <span className="text-xs" style={{ color:"var(--secondary)" }}>
+              {isSerie ? `S${String(season).padStart(2,"0")}E${String(episode).padStart(2,"0")}` : fmtTime(mins)}
+            </span>
+            <span className="text-xs font-bold" style={{ color:"var(--accent)" }}>{pct}%</span>
+          </div>
+          <div className="w-full rounded-full h-2 overflow-hidden" style={{ background:"var(--input-bg)" }}>
+            <div className="h-full rounded-full transition-all duration-300 gradient-bg" style={{ width:`${pct}%` }} />
+          </div>
+        </div>
+
+        {isSerie ? (
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Saison</label>
+              <input type="number" min="1" max={item.totalSeasons} value={season}
+                onChange={e => setSeason(Number(e.target.value))}
+                className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Épisode</label>
+              <input type="number" min="0" max={item.episodesPerSeason} value={episode}
+                onChange={e => setEpisode(Number(e.target.value))}
+                className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color:"var(--secondary)" }}>Minutes vues</label>
+            <input type="number" min="0" max={item.duration} value={mins}
+              onChange={e => setMins(Number(e.target.value))}
+              className="w-full rounded-xl px-3 py-2.5 text-sm border" />
+          </div>
+        )}
+
+        <button onClick={() => onSave(isSerie ? { currentSeason:season, currentEpisode:episode } : { watchedMinutes:mins })}
+          className="w-full mt-5 py-3 rounded-xl font-semibold text-sm gradient-bg text-white">
+          Enregistrer
+        </button>
+      </div>
     </div>
   );
 }
