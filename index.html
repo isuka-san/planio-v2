@@ -1620,7 +1620,7 @@ function DepensesModal({ members, user, onClose, onSave })
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "90px" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-4">Nouvelle dépense 💸</h3>
         <input className="input w-full mb-3" placeholder="Description (ex: Restaurant)" value={titre} onChange={e => setTitre(e.target.value)} />
         <input className="input w-full mb-3" type="number" placeholder="Montant (€)" value={montant} onChange={e => setMontant(e.target.value)} />
@@ -1751,7 +1751,7 @@ function RepasModal({ slot, existing, onClose, onSave, onDelete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "90px" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-1">{slot.jour} — {slot.moment} 🍽️</h3>
         <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>{existing ? "Modifier le repas" : "Ajouter un repas"}</p>
         <input className="input w-full mb-3" placeholder="Plat (ex: Pâtes bolognaise)" value={plat} onChange={e => setPlat(e.target.value)} />
