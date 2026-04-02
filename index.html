@@ -211,6 +211,12 @@ const SOCIAL_MODULES = [
   { id: "repas",     label: "Repas",     emoji: "🍽️", desc: "Planning repas et recettes" },
 ];
 
+const FOCUS_MODULES = [
+  { id: "focus_today", label: "Aujourd'hui", emoji: "🎯" },
+  { id: "depenses",    label: "Dépenses",    emoji: "💸" },
+  { id: "repas",       label: "Repas",       emoji: "🍽️" },
+];
+
 const COWORK_TABS = [
   { id: "taches",  label: "Tâches",  emoji: "✅" },
   { id: "projets", label: "Projets", emoji: "📁" },
@@ -2566,7 +2572,7 @@ function FocusScreen({ spaceId, user }) {
   };
 
   return (
-    <div className="pb-10 px-4 pt-3 max-w-md mx-auto">
+    <div className="pb-32 px-4 pt-3 max-w-md mx-auto">
       {/* Citation */}
       <div className="mb-4 px-4 py-3 rounded-2xl text-center text-sm italic"
         style={{ background: "var(--input-bg)", color: "var(--secondary)", border: "1px solid var(--border)" }}>
@@ -2743,7 +2749,8 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
 
   // Détermine les modules actifs pour un espace social
   const getSpaceModules = (sp) => {
-    if (spaceMode !== "social") return spaceMode === "coworking" ? COWORK_TABS : [];
+    if (spaceMode === "focus")     return FOCUS_MODULES;
+    if (spaceMode === "coworking") return COWORK_TABS;
     const mods = sp?.modules;
     if (mods && mods.length > 0) return SOCIAL_MODULES.filter(m => mods.includes(m.id));
     return TABS; // fallback pour anciens espaces
@@ -2843,7 +2850,11 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
 
       {/* Contenu selon onglet actif */}
       {spaceMode === "focus" ? (
-        <FocusScreen spaceId={space.id} user={user} />
+        <>
+          {activeTab === "focus_today" && <FocusScreen spaceId={space.id} user={user} />}
+          {activeTab === "depenses"    && <DepensesTab spaceId={space.id} user={user} members={members} />}
+          {activeTab === "repas"       && <RepasTab    spaceId={space.id} user={user} members={members} />}
+        </>
       ) : spaceMode === "coworking" ? (
         <>
           {activeTab === "taches"  && <TachesTab  spaceId={space.id} user={user} members={members} />}
@@ -2865,8 +2876,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
       )}
 
       {/* Barre de navigation en bas (cachée en mode Focus) */}
-      {spaceMode !== "focus" && (
-        <div className="bottom-nav">
+      {<div className="bottom-nav">
           {spaceModules.length <= 4 ? (
             /* Mode normal : ≤ 4 modules */
             <div className="flex">
@@ -2936,8 +2946,6 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
             </>
           )}
         </div>
-      )}
-
       {/* Modal infos espace */}
       {showInfo && (
         <div className="modal-overlay" onClick={() => setShowInfo(false)}>
