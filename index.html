@@ -1533,7 +1533,7 @@ function DepensesTab({ spaceId, user, members }) {
 
   const getMemberName = (uid) => {
     const m = members.find(m => m.uid === uid);
-    return m?.displayName || m?.email?.split('@')[0] || '?';
+    return m?.name || m?.displayName || m?.email?.split('@')[0] || '?';
   };
 
   return (
@@ -1615,7 +1615,7 @@ function DepensesModal({ members, user, onClose, onSave })
 
   const getMemberName = (uid) => {
     const m = members.find(m => m.uid === uid);
-    return m?.displayName || m?.email?.split('@')[0] || '?';
+    return m?.name || m?.displayName || m?.email?.split('@')[0] || '?';
   };
 
   return (
