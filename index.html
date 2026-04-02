@@ -97,7 +97,7 @@ const db   = firebase.firestore();
 // ── FCM Push Notifications ──────────────────────────────────────
 // ⚠️  Remplis ta VAPID key : Firebase Console → Project Settings
 //     → Cloud Messaging → Web Push certificates → Generate/Copy key pair
-const VAPID_KEY = ""; // ← colle ta clé ici
+const VAPID_KEY = "BEgkKzE2hnal-LmeyQMmAgiIZK0vh-hJuuCOZyrrwCaO2DBEgjwD9xUThnGu1Lt_MkPF0Fjdnd4GftFLsmlYZA8"; // ← colle ta clé ici
 let messaging = null;
 try { if (typeof firebase.messaging === "function") messaging = firebase.messaging(); } catch(e) {}
 
