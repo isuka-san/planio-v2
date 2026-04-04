@@ -1512,15 +1512,35 @@ function IdeesTab({ spaceId, user, members }) {
 
 // ---- Dépenses ----
 function DepensesTab({ spaceId, user, members }) {
-  const [modal, setModal]   = useState(false);
+  const [modal, setModal]         = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const path = spaceId ? `spaces/${spaceId}/depenses` : null;
   const depenses = useCollection(path);
 
+  // Paramètres financiers (localStorage par utilisateur)
+  const [salaire, setSalaire]       = useState(() => parseFloat(localStorage.getItem(`planio_salaire_${user.uid}`)) || 0);
+  const [roundUpStep, setRoundUpStep] = useState(() => parseInt(localStorage.getItem(`planio_roundup_${user.uid}`)) || 5);
+
+  const saveSettings = (s, r) => {
+    localStorage.setItem(`planio_salaire_${user.uid}`, s);
+    localStorage.setItem(`planio_roundup_${user.uid}`, r);
+    setSalaire(parseFloat(s) || 0);
+    setRoundUpStep(parseInt(r) || 5);
+  };
+
   const add = async (form) => {
     try {
+      const montant = parseFloat(form.montant) || 0;
+      const rounded = form.categorie === 'perso' && roundUpStep > 0
+        ? Math.ceil(montant / roundUpStep) * roundUpStep
+        : montant;
+      const roundUp = rounded - montant;
       await db.collection(path).add({
         titre: form.titre,
-        montant: parseFloat(form.montant) || 0,
+        montant,
+        montantArrondi: rounded,
+        roundUp,
+        categorie: form.categorie || 'perso',
         payeur: form.payeur || user.uid,
         participants: form.participants || members.map(m => m.uid),
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1534,7 +1554,25 @@ function DepensesTab({ spaceId, user, members }) {
     catch(e) { console.error(e); }
   };
 
-  // Calcul des soldes
+  // Mois courant
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const depensesMois = depenses.filter(d => {
+    const date = d.createdAt?.toDate?.() || new Date();
+    const m = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+    return m === currentMonth;
+  });
+
+  // Totaux
+  const totalCagnotte   = depenses.reduce((s, d) => s + (d.roundUp || 0), 0);
+  const totalPersoMois  = depensesMois.filter(d => d.categorie !== 'pro').reduce((s, d) => s + (d.montant || 0), 0);
+  const totalProMois    = depensesMois.filter(d => d.categorie === 'pro').reduce((s, d) => s + (d.montant || 0), 0);
+  const epergneMois     = depensesMois.reduce((s, d) => s + (d.roundUp || 0), 0);
+  const totalToutesMois = totalPersoMois + totalProMois;
+  const restant         = salaire - totalToutesMois;
+  const budgetPct       = salaire > 0 ? Math.min(100, (totalToutesMois / salaire) * 100) : 0;
+
+  // Calcul des soldes membres
   const balances = {};
   members.forEach(m => { balances[m.uid] = 0; });
   depenses.forEach(dep => {
@@ -1543,8 +1581,6 @@ function DepensesTab({ spaceId, user, members }) {
     if (balances[dep.payeur] !== undefined) balances[dep.payeur] += dep.montant;
     parts.forEach(uid => { if (balances[uid] !== undefined) balances[uid] -= share; });
   });
-
-  const total = depenses.reduce((s, d) => s + (d.montant || 0), 0);
 
   const getMemberName = (uid) => {
     const m = members.find(m => m.uid === uid);
@@ -1555,13 +1591,69 @@ function DepensesTab({ spaceId, user, members }) {
     <div className="px-4 pt-4 pb-32">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">Dépenses 💸</h2>
-        <button onClick={() => setModal(true)} className="gradient-bg text-white text-sm font-semibold px-3 py-2 rounded-xl flex items-center gap-1">
-          <span className="text-base">+</span> Ajouter
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚙️</button>
+          <button onClick={() => setModal(true)} className="gradient-bg text-white text-sm font-semibold px-3 py-2 rounded-xl flex items-center gap-1">
+            <span className="text-base">+</span> Ajouter
+          </button>
+        </div>
       </div>
 
-      {/* Récap soldes */}
-      {members.length > 0 && (
+      {/* Cagnotte épargne */}
+      <div className="card p-4 mb-3" style={{ background: "linear-gradient(135deg,rgba(249,168,212,0.12),rgba(192,132,252,0.12))", border: "1px solid rgba(192,132,252,0.25)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-semibold mb-1" style={{ color: "var(--secondary)" }}>💰 CAGNOTTE ÉPARGNE</div>
+            <div className="text-2xl font-bold" style={{ color: "#c084fc" }}>{totalCagnotte.toFixed(2)} €</div>
+            <div className="text-xs mt-1" style={{ color: "var(--secondary)" }}>accumulés par arrondi auto</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-semibold mb-1" style={{ color: "var(--secondary)" }}>CE MOIS</div>
+            <div className="text-lg font-bold" style={{ color: "#86efac" }}>+{epergneMois.toFixed(2)} €</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Budget restant */}
+      {salaire > 0 && (
+        <div className="card p-4 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold" style={{ color: "var(--secondary)" }}>BUDGET CE MOIS</div>
+            <div className={`text-sm font-bold ${restant >= 0 ? "text-green-400" : "text-red-400"}`}>
+              {restant >= 0 ? "+" : ""}{restant.toFixed(0)} € restants
+            </div>
+          </div>
+          <div className="w-full rounded-full h-2" style={{ background: "var(--input-bg)" }}>
+            <div className="h-2 rounded-full transition-all" style={{ width: `${budgetPct}%`, background: budgetPct > 85 ? "#f87171" : budgetPct > 65 ? "#fbbf24" : "var(--accent)" }}></div>
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="text-xs" style={{ color: "var(--secondary)" }}>{totalToutesMois.toFixed(0)} € dépensés (perso + pro)</span>
+            <span className="text-xs" style={{ color: "var(--secondary)" }}>{salaire.toFixed(0)} € salaire</span>
+          </div>
+        </div>
+      )}
+
+      {/* Bilan mensuel */}
+      <div className="card p-4 mb-4">
+        <div className="text-xs font-semibold mb-3" style={{ color: "var(--secondary)" }}>BILAN DU MOIS</div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="text-center p-2 rounded-xl" style={{ background: "var(--input-bg)" }}>
+            <div className="text-xs mb-1" style={{ color: "var(--secondary)" }}>Perso</div>
+            <div className="font-bold text-sm">{totalPersoMois.toFixed(0)} €</div>
+          </div>
+          <div className="text-center p-2 rounded-xl" style={{ background: "var(--input-bg)" }}>
+            <div className="text-xs mb-1" style={{ color: "var(--secondary)" }}>Pro</div>
+            <div className="font-bold text-sm" style={{ color: "#93c5fd" }}>{totalProMois.toFixed(0)} €</div>
+          </div>
+          <div className="text-center p-2 rounded-xl" style={{ background: "var(--input-bg)" }}>
+            <div className="text-xs mb-1" style={{ color: "var(--secondary)" }}>Épargné</div>
+            <div className="font-bold text-sm" style={{ color: "#c084fc" }}>{epergneMois.toFixed(0)} €</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Soldes membres */}
+      {members.length > 1 && (
         <div className="card p-4 mb-4">
           <div className="text-xs font-semibold mb-3" style={{ color: "var(--secondary)" }}>SOLDES</div>
           <div className="flex flex-col gap-2">
@@ -1577,29 +1669,31 @@ function DepensesTab({ spaceId, user, members }) {
               );
             })}
           </div>
-          <div className="mt-3 pt-3 flex justify-between" style={{ borderTop: "1px solid var(--border)" }}>
-            <span className="text-xs" style={{ color: "var(--secondary)" }}>Total dépensé</span>
-            <span className="text-sm font-bold">{total.toFixed(2)} €</span>
-          </div>
         </div>
       )}
 
+      {/* Liste dépenses */}
       {depenses.length === 0
         ? <EmptyState emoji="💸" text="aucune dépense" />
         : depenses.map(dep => {
-          const parts = dep.participants || members.map(m => m.uid);
-          const share = parts.length > 0 ? dep.montant / parts.length : dep.montant;
+          const isPro = dep.categorie === 'pro';
           return (
             <div key={dep.id} className="card p-4 mb-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold">{dep.titre}</span>
+                    {isPro
+                      ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(147,197,253,0.2)", color: "#93c5fd" }}>💼 Pro</span>
+                      : <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(134,239,172,0.2)", color: "#86efac" }}>🏠 Perso</span>
+                    }
                     <UserBadge uid={dep.payeur} members={members} />
                   </div>
-                  <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
                     <span className="text-lg font-bold" style={{ color: "var(--accent)" }}>{(dep.montant || 0).toFixed(2)} €</span>
-                    <span className="text-xs" style={{ color: "var(--secondary)" }}>{share.toFixed(2)} €/pers · {parts.length} participant{parts.length > 1 ? "s" : ""}</span>
+                    {dep.roundUp > 0 && (
+                      <span className="text-xs font-medium" style={{ color: "#c084fc" }}>+{dep.roundUp.toFixed(2)} € épargne 💰</span>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => del(dep.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
@@ -1611,18 +1705,26 @@ function DepensesTab({ spaceId, user, members }) {
       }
 
       {modal && (
-        <DepensesModal members={members} user={user} onClose={() => setModal(false)} onSave={(form) => { add(form); setModal(false); }} />
+        <DepensesModal members={members} user={user} roundUpStep={roundUpStep} onClose={() => setModal(false)} onSave={(form) => { add(form); setModal(false); }} />
+      )}
+      {showSettings && (
+        <DepensesSettings user={user} salaire={salaire} roundUpStep={roundUpStep} onClose={() => setShowSettings(false)} onSave={saveSettings} />
       )}
     </div>
   );
 }
 
-function DepensesModal({ members, user, onClose, onSave }) 
-{
-  const [titre, setTitre]           = useState("");
-  const [montant, setMontant]       = useState("");
-  const [payeur, setPayeur]         = useState(user.uid);
+function DepensesModal({ members, user, roundUpStep, onClose, onSave }) {
+  const [titre, setTitre]               = useState("");
+  const [montant, setMontant]           = useState("");
+  const [categorie, setCategorie]       = useState("perso");
+  const [payeur, setPayeur]             = useState(user.uid);
   const [participants, setParticipants] = useState(members.map(m => m.uid));
+
+  const montantNum = parseFloat(montant) || 0;
+  const roundUp = categorie === 'perso' && montantNum > 0 && roundUpStep > 0
+    ? Math.ceil(montantNum / roundUpStep) * roundUpStep - montantNum
+    : 0;
 
   const toggleParticipant = (uid) => {
     setParticipants(prev => prev.includes(uid) ? prev.filter(u => u !== uid) : [...prev, uid]);
@@ -1635,10 +1737,34 @@ function DepensesModal({ members, user, onClose, onSave })
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "90px" }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-3xl p-6" style={{ background: "var(--card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "90px" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-4">Nouvelle dépense 💸</h3>
+
+        {/* Toggle Perso / Pro */}
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setCategorie("perso")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{ background: categorie === "perso" ? "rgba(134,239,172,0.15)" : "var(--input-bg)", color: categorie === "perso" ? "#86efac" : "var(--secondary)", border: categorie === "perso" ? "1px solid rgba(134,239,172,0.4)" : "1px solid transparent" }}>
+            🏠 Perso
+          </button>
+          <button onClick={() => setCategorie("pro")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{ background: categorie === "pro" ? "rgba(147,197,253,0.15)" : "var(--input-bg)", color: categorie === "pro" ? "#93c5fd" : "var(--secondary)", border: categorie === "pro" ? "1px solid rgba(147,197,253,0.4)" : "1px solid transparent" }}>
+            💼 Pro
+          </button>
+        </div>
+
         <input className="input w-full mb-3" placeholder="Description (ex: Restaurant)" value={titre} onChange={e => setTitre(e.target.value)} />
-        <input className="input w-full mb-3" type="number" placeholder="Montant (€)" value={montant} onChange={e => setMontant(e.target.value)} />
+        <input className="input w-full mb-2" type="number" placeholder="Montant (€)" value={montant} onChange={e => setMontant(e.target.value)} />
+
+        {/* Aperçu arrondi */}
+        {roundUp > 0 && (
+          <div className="mb-3 p-3 rounded-xl flex items-center gap-2" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.3)" }}>
+            <span>💰</span>
+            <span className="text-sm" style={{ color: "#c084fc" }}>
+              {montantNum.toFixed(2)} € → arrondi à <strong>{(montantNum + roundUp).toFixed(2)} €</strong>, <strong>+{roundUp.toFixed(2)} € en épargne</strong>
+            </span>
+          </div>
+        )}
+
         <div className="mb-3">
           <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PAYÉ PAR</div>
           <div className="flex flex-wrap gap-2">
@@ -1663,10 +1789,48 @@ function DepensesModal({ members, user, onClose, onSave })
             ))}
           </div>
         </div>
-        <button onClick={() => { if (titre && montant && participants.length > 0) onSave({ titre, montant, payeur, participants }); }}
+        <button onClick={() => { if (titre && montant && participants.length > 0) onSave({ titre, montant, categorie, payeur, participants }); }}
           disabled={!titre || !montant || participants.length === 0}
           className="gradient-bg text-white font-semibold w-full py-3 rounded-xl disabled:opacity-40">
-          Ajouter la dépense
+          {roundUp > 0 ? `Ajouter (+${roundUp.toFixed(2)} € épargne 💰)` : "Ajouter la dépense"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DepensesSettings({ user, salaire, roundUpStep, onClose, onSave }) {
+  const [s, setS] = useState(salaire > 0 ? String(salaire) : "");
+  const [r, setR] = useState(String(roundUpStep));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-4">⚙️ Paramètres financiers</h3>
+
+        <div className="mb-4">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>SALAIRE MENSUEL NET (€)</label>
+          <input className="input w-full" type="number" placeholder="ex: 2500" value={s} onChange={e => setS(e.target.value)} />
+          <p className="text-xs mt-1" style={{ color: "var(--secondary)" }}>Toutes tes dépenses (perso + pro) sont déduites de ce montant.</p>
+        </div>
+
+        <div className="mb-6">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>ARRONDI AUTOMATIQUE</label>
+          <div className="flex gap-2">
+            {[5, 10].map(v => (
+              <button key={v} onClick={() => setR(String(v))}
+                className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+                style={{ background: r === String(v) ? "rgba(192,132,252,0.18)" : "var(--input-bg)", color: r === String(v) ? "#c084fc" : "var(--secondary)", border: r === String(v) ? "1px solid rgba(192,132,252,0.45)" : "1px solid transparent" }}>
+                Arrondi à {v} €
+              </button>
+            ))}
+          </div>
+          <p className="text-xs mt-2" style={{ color: "var(--secondary)" }}>Chaque dépense perso est arrondie au palier supérieur, la différence va en cagnotte épargne.</p>
+        </div>
+
+        <button onClick={() => { onSave(s, r); onClose(); }}
+          className="gradient-bg text-white font-semibold w-full py-3 rounded-xl">
+          Enregistrer
         </button>
       </div>
     </div>
