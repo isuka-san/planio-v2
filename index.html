@@ -1751,116 +1751,123 @@ function DepensesTab({ spaceId, user, members }) {
 }
 
 function DepensesModal({ members, user, roundUpStep = 5, onClose, onSave }) {
-  const [titre, setTitre]                   = useState("");
-  const [montant, setMontant]               = useState("");
-  const [payeur, setPayeur]                 = useState(user.uid);
-  const [participants, setParticipants]     = useState(members.map(m => m.uid));
-  const [categorie, setCategorie]           = useState("perso");
+  const [titre, setTitre]               = useState("");
+  const [montant, setMontant]           = useState("");
+  const [categorie, setCategorie]       = useState("perso");
+  const [payeur, setPayeur]             = useState(user.uid);
+  const [participants, setParticipants] = useState(members.map(m => m.uid));
 
-  const montantNum     = parseFloat(montant) || 0;
-  const step           = roundUpStep || 5;
-  const montantArrondi = montantNum > 0 ? Math.ceil(montantNum / step) * step : 0;
-  const roundUpEpargne = montantNum > 0 ? montantArrondi - montantNum : 0;
-  const showRoundUp    = montantNum > 0 && roundUpEpargne > 0;
+  const montantNum = parseFloat(montant) || 0;
+  const roundUp = categorie === 'perso' && montantNum > 0 && roundUpStep > 0
+    ? Math.ceil(montantNum / roundUpStep) * roundUpStep - montantNum
+    : 0;
 
   const toggleParticipant = (uid) => {
     setParticipants(prev => prev.includes(uid) ? prev.filter(u => u !== uid) : [...prev, uid]);
   };
+
   const getMemberName = (uid) => {
     const m = members.find(m => m.uid === uid);
     return m?.name || m?.displayName || m?.email?.split('@')[0] || '?';
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center"
-         style={{ background: 'rgba(0,0,0,0.72)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10"
-           style={{ background: 'var(--card)', maxHeight: '85vh', overflowY: 'auto' }}
-           onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-5">
-          <h3 className="text-base font-bold">Nouvelle dépense</h3>
-          <button onClick={onClose} className="text-white/40 text-2xl leading-none">×</button>
-        </div>
-
-        {/* Description */}
-        <div className="mb-4">
-          <label className="text-xs text-white/40 mb-1 block">Description</label>
-          <input type="text" value={titre} onChange={e => setTitre(e.target.value)}
-            placeholder="Ex : Courses, Restaurant…"
-            className="w-full bg-white/10 text-white rounded-xl px-3 py-2.5 text-sm" />
-        </div>
-
-        {/* Montant + round-up reveal */}
-        <div className="mb-4">
-          <label className="text-xs text-white/40 mb-1 block">Montant (€)</label>
-          <input type="number" inputMode="decimal" value={montant} onChange={e => setMontant(e.target.value)}
-            placeholder="0.00" className="w-full bg-white/10 text-white rounded-xl px-3 py-2.5 text-sm" />
-          {showRoundUp && (
-            <div className="mt-2 rounded-xl px-3 py-2.5 text-sm animate-pulse-once"
-                 style={{ background: 'linear-gradient(135deg,rgba(167,139,250,0.18),rgba(139,92,246,0.22))', border: '1px solid rgba(167,139,250,0.3)' }}>
-              <span className="text-white/50">{montantNum}€</span>
-              <span className="text-white/40 mx-2">→ arrondi à</span>
-              <span className="text-white font-bold">{montantArrondi}€</span>
-              <span className="text-purple-300 ml-2">+{roundUpEpargne.toFixed(2)}€ 💰 épargne</span>
-            </div>
-          )}
-        </div>
-
-        {/* Catégorie */}
-        <div className="mb-4">
-          <label className="text-xs text-white/40 mb-1 block">Catégorie</label>
-          <div className="flex gap-2">
-            <button onClick={() => setCategorie('perso')}
-              className={"flex-1 py-2 rounded-xl text-sm font-bold transition-all " + (categorie === 'perso' ? 'gradient-bg text-white' : 'bg-white/10 text-white/60')}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl flex flex-col" style={{ background: "var(--card)", maxHeight: "88vh" }} onClick={e => e.stopPropagation()}>
+        <div className="overflow-y-auto p-6 flex-1">
+          <h3 className="text-lg font-bold mb-4">Nouvelle dépense 💸</h3>
+          <div className="flex gap-2 mb-4">
+            <button onClick={() => setCategorie("perso")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+              style={{ background: categorie === "perso" ? "rgba(134,239,172,0.15)" : "var(--input-bg)", color: categorie === "perso" ? "#86efac" : "var(--secondary)", border: categorie === "perso" ? "1px solid rgba(134,239,172,0.4)" : "1px solid transparent" }}>
               🏠 Perso
             </button>
-            <button onClick={() => setCategorie('pro')}
-              className={"flex-1 py-2 rounded-xl text-sm font-bold transition-all " + (categorie === 'pro' ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60')}>
+            <button onClick={() => setCategorie("pro")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+              style={{ background: categorie === "pro" ? "rgba(147,197,253,0.15)" : "var(--input-bg)", color: categorie === "pro" ? "#93c5fd" : "var(--secondary)", border: categorie === "pro" ? "1px solid rgba(147,197,253,0.4)" : "1px solid transparent" }}>
               💼 Pro
             </button>
           </div>
+          <input className="input w-full mb-3" placeholder="Description (ex: Restaurant)" value={titre} onChange={e => setTitre(e.target.value)} />
+          <input className="input w-full mb-2" type="number" placeholder="Montant (€)" value={montant} onChange={e => setMontant(e.target.value)} />
+          {roundUp > 0 && (
+            <div className="mb-3 p-3 rounded-xl flex items-center gap-2" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.3)" }}>
+              <span>💰</span>
+              <span className="text-sm" style={{ color: "#c084fc" }}>
+                {montantNum.toFixed(2)} € → arrondi à <strong>{(montantNum + roundUp).toFixed(2)} €</strong>, <strong>+{roundUp.toFixed(2)} € en épargne</strong>
+              </span>
+            </div>
+          )}
+          <div className="mb-3">
+            <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PAYÉ PAR</div>
+            <div className="flex flex-wrap gap-2">
+              {members.map(m => (
+                <button key={m.uid} onClick={() => setPayeur(m.uid)}
+                  className="px-3 py-1 rounded-full text-sm font-medium transition-all"
+                  style={{ background: payeur === m.uid ? "var(--accent)" : "var(--input-bg)", color: payeur === m.uid ? "#fff" : "var(--text)" }}>
+                  {getMemberName(m.uid)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mb-2">
+            <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PARTICIPANTS</div>
+            <div className="flex flex-wrap gap-2">
+              {members.map(m => (
+                <button key={m.uid} onClick={() => toggleParticipant(m.uid)}
+                  className="px-3 py-1 rounded-full text-sm font-medium transition-all"
+                  style={{ background: participants.includes(m.uid) ? "var(--accent)" : "var(--input-bg)", color: participants.includes(m.uid) ? "#fff" : "var(--text)" }}>
+                  {getMemberName(m.uid)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+        <div className="px-6 pt-3" style={{ paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid var(--border)" }}>
+          <button onClick={() => { if (titre && montant && participants.length > 0) onSave({ titre, montant, categorie, payeur, participants }); }}
+            disabled={!titre || !montant || participants.length === 0}
+            className="gradient-bg text-white font-semibold w-full py-3 rounded-xl disabled:opacity-40">
+            {roundUp > 0 ? `Ajouter (+${roundUp.toFixed(2)} € épargne 💰)` : "Ajouter la dépense"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-        {/* Payé par */}
+function DepensesSettings({ user, salaire, roundUpStep, onClose, onSave }) {
+  const [s, setS] = useState(salaire > 0 ? String(salaire) : "");
+  const [r, setR] = useState(String(roundUpStep));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-4">⚙️ Paramètres financiers</h3>
         <div className="mb-4">
-          <label className="text-xs text-white/40 mb-1 block">Payé par</label>
-          <div className="flex gap-2 flex-wrap">
-            {members.map(m => (
-              <button key={m.uid} onClick={() => setPayeur(m.uid)}
-                className={"px-3 py-1.5 rounded-full text-xs font-semibold transition-all " + (payeur === m.uid ? 'gradient-bg text-white' : 'bg-white/10 text-white/60')}>
-                {getMemberName(m.uid)}
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>SALAIRE MENSUEL NET (€)</label>
+          <input className="input w-full" type="number" placeholder="ex: 2500" value={s} onChange={e => setS(e.target.value)} />
+          <p className="text-xs mt-1" style={{ color: "var(--secondary)" }}>Toutes tes dépenses (perso + pro) sont déduites de ce montant.</p>
+        </div>
+        <div className="mb-6">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>ARRONDI AUTOMATIQUE</label>
+          <div className="flex gap-2">
+            {[5, 10].map(v => (
+              <button key={v} onClick={() => setR(String(v))}
+                className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+                style={{ background: r === String(v) ? "rgba(192,132,252,0.18)" : "var(--input-bg)", color: r === String(v) ? "#c084fc" : "var(--secondary)", border: r === String(v) ? "1px solid rgba(192,132,252,0.45)" : "1px solid transparent" }}>
+                Arrondi à {v} €
               </button>
             ))}
           </div>
+          <p className="text-xs mt-2" style={{ color: "var(--secondary)" }}>Chaque dépense perso est arrondie au palier supérieur, la différence va en cagnotte épargne.</p>
         </div>
-
-        {/* Participants */}
-        <div className="mb-5">
-          <label className="text-xs text-white/40 mb-1 block">Participants</label>
-          <div className="flex gap-2 flex-wrap">
-            {members.map(m => (
-              <button key={m.uid} onClick={() => toggleParticipant(m.uid)}
-                className={"px-3 py-1.5 rounded-full text-xs font-semibold transition-all " + (participants.includes(m.uid) ? 'gradient-bg text-white' : 'bg-white/10 text-white/30')}>
-                {getMemberName(m.uid)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            if (!titre.trim()) { alert('Ajoute un titre'); return; }
-            if (!montantNum)   { alert('Ajoute un montant'); return; }
-            onSave({ titre, montant: montantNum, montantArrondi: montantArrondi || montantNum,
-                     roundUpEpargne, categorie, payeur, participants });
-          }}
-          className="w-full gradient-bg text-white font-bold py-3.5 rounded-2xl text-sm">
-          {showRoundUp ? 'Ajouter ' + montantArrondi + '€ (+' + roundUpEpargne.toFixed(2) + '€ épargne)' : 'Ajouter' + (montantNum > 0 ? ' ' + montantNum + '€' : '')}
+        <button onClick={() => { onSave(s, r); onClose(); }}
+          className="gradient-bg text-white font-semibold w-full py-3 rounded-xl">
+          Enregistrer
         </button>
       </div>
     </div>
   );
 }
+
 function RepasTab({ spaceId, user, members }) {
   const [addSlot, setAddSlot]   = useState(null); // { jour, moment }
   const [editItem, setEditItem] = useState(null);
