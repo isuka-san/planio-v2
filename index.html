@@ -1864,6 +1864,410 @@ function DepensesSettings({ user, salaire, roundUpStep, onClose, onSave }) {
   );
 }
 
+// ---- Nutrition Focus (module repas personnel) ----
+const MOMENTS_FOCUS = [
+  { id: "petit-dej", label: "Petit-déjeuner", emoji: "🌅" },
+  { id: "dejeuner",  label: "Déjeuner",       emoji: "☀️" },
+  { id: "diner",     label: "Dîner",          emoji: "🌙" },
+  { id: "collation", label: "Collation",      emoji: "🍎" },
+];
+
+const ALIMENTS_RAPIDES = [
+  { nom: "Riz cuit (100g)",           cal: 130, p: 2.7, g: 28,  l: 0.3 },
+  { nom: "Poulet grillé (100g)",      cal: 165, p: 31,  g: 0,   l: 3.6 },
+  { nom: "Œuf entier",                cal: 72,  p: 6,   g: 0.4, l: 5   },
+  { nom: "Flocons d'avoine (50g)",    cal: 182, p: 6.5, g: 31,  l: 3.5 },
+  { nom: "Banane",                    cal: 89,  p: 1.1, g: 23,  l: 0.3 },
+  { nom: "Thon en boîte (100g)",      cal: 116, p: 26,  g: 0,   l: 1   },
+  { nom: "Pain complet (1 tranche)",  cal: 80,  p: 4,   g: 15,  l: 1   },
+  { nom: "Lait demi-écrémé (200ml)",  cal: 96,  p: 6.6, g: 9.4, l: 3.4 },
+  { nom: "Yaourt nature (125g)",      cal: 68,  p: 5,   g: 7.5, l: 1.8 },
+  { nom: "Pâtes cuites (100g)",       cal: 158, p: 5.8, g: 31,  l: 1   },
+  { nom: "Saumon (100g)",             cal: 208, p: 20,  g: 0,   l: 13  },
+  { nom: "Brocoli cuit (100g)",       cal: 35,  p: 2.4, g: 7.2, l: 0.4 },
+  { nom: "Amandes (30g)",             cal: 174, p: 6,   g: 6,   l: 15  },
+  { nom: "Whey protéine (30g)",       cal: 115, p: 24,  g: 3,   l: 1.5 },
+  { nom: "Steak haché 5% (100g)",     cal: 121, p: 21,  g: 0,   l: 4   },
+  { nom: "Patate douce cuite (100g)", cal: 90,  p: 2,   g: 21,  l: 0.1 },
+  { nom: "Fromage blanc 0% (100g)",   cal: 43,  p: 8,   g: 4,   l: 0.2 },
+  { nom: "Avocat (100g)",             cal: 160, p: 2,   g: 9,   l: 15  },
+];
+
+function calcNutriObjectifs(poids, activite, objectif) {
+  const p = parseFloat(poids) || 75;
+  const mult = { sedentaire: 1.2, modere: 1.55, actif: 1.725, "tres-actif": 1.9 }[activite] || 1.55;
+  const tdee = Math.round(p * 24 * mult);
+  const adjust = { masse: 350, perte: -400, maintien: 0 }[objectif] || 0;
+  const cal = tdee + adjust;
+  const splits = {
+    masse:    { p: 0.30, g: 0.40, l: 0.30 },
+    perte:    { p: 0.35, g: 0.40, l: 0.25 },
+    maintien: { p: 0.25, g: 0.45, l: 0.30 },
+  }[objectif] || { p: 0.25, g: 0.45, l: 0.30 };
+  return {
+    cal,
+    prot: Math.round(cal * splits.p / 4),
+    gluc: Math.round(cal * splits.g / 4),
+    lipi: Math.round(cal * splits.l / 9),
+  };
+}
+
+function FocusRepasTab({ spaceId, user }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [showSettings, setShowSettings] = useState(false);
+  const [addMoment, setAddMoment]       = useState(null);
+  const [showPoids, setShowPoids]       = useState(false);
+  const [activeDay, setActiveDay]       = useState(today);
+
+  const uid = user.uid;
+  const [objectif,  setObjectif]  = useState(() => localStorage.getItem(`pn_obj_${uid}`)    || "maintien");
+  const [poids,     setPoids]     = useState(() => localStorage.getItem(`pn_poids_${uid}`)  || "");
+  const [activite,  setActivite]  = useState(() => localStorage.getItem(`pn_act_${uid}`)    || "modere");
+
+  const objectifs = calcNutriObjectifs(poids, activite, objectif);
+
+  const saveSettings = (o, po, a) => {
+    localStorage.setItem(`pn_obj_${uid}`, o);
+    localStorage.setItem(`pn_poids_${uid}`, po);
+    localStorage.setItem(`pn_act_${uid}`, a);
+    setObjectif(o); setPoids(po); setActivite(a);
+  };
+
+  const journalPath = spaceId ? `spaces/${spaceId}/repas_journal` : null;
+  const poidsPath   = spaceId ? `spaces/${spaceId}/repas_poids`   : null;
+  const journal = useCollection(journalPath);
+  const poidsLog = useCollection(poidsPath);
+
+  const addRepas = async (form) => {
+    if (!journalPath) return;
+    await db.collection(journalPath).add({
+      date: activeDay, moment: form.moment, plat: form.plat,
+      cal: form.cal, prot: form.prot, gluc: form.gluc, lipi: form.lipi,
+      uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  };
+
+  const delRepas = async (id) => {
+    if (window.confirm('Supprimer ce repas ?'))
+      await db.collection(journalPath).doc(id).delete();
+  };
+
+  const addPoids = async (p) => {
+    if (!poidsPath) return;
+    const existing = poidsLog.find(e => e.date === today && e.uid === uid);
+    if (existing) await db.collection(poidsPath).doc(existing.id).update({ poids: parseFloat(p) });
+    else await db.collection(poidsPath).add({ date: today, poids: parseFloat(p), uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  };
+
+  // Données du jour actif
+  const repasJour = journal.filter(r => r.date === activeDay && r.uid === uid);
+  const totCal  = repasJour.reduce((s, r) => s + (r.cal  || 0), 0);
+  const totProt = repasJour.reduce((s, r) => s + (r.prot || 0), 0);
+  const totGluc = repasJour.reduce((s, r) => s + (r.gluc || 0), 0);
+  const totLipi = repasJour.reduce((s, r) => s + (r.lipi || 0), 0);
+  const calPct  = objectifs.cal > 0 ? Math.min(100, (totCal / objectifs.cal) * 100) : 0;
+
+  // Poids courant
+  const dernierPoids = [...poidsLog].filter(p => p.uid === uid).sort((a,b) => b.date?.localeCompare(a.date)).find(Boolean);
+
+  // 7 derniers jours pour la vue semaine
+  const sept = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+  const calParJour = sept.map(d => ({
+    d, cal: journal.filter(r => r.date === d && r.uid === uid).reduce((s, r) => s + (r.cal || 0), 0)
+  }));
+  const maxCal = Math.max(...calParJour.map(j => j.cal), objectifs.cal, 1);
+  const jourLabels = ["D-6","D-5","D-4","D-3","D-2","Hier","Auj"];
+
+  const calBar = (val, max, color, bg = "var(--input-bg)") => (
+    <div className="w-full rounded-full h-2" style={{ background: bg }}>
+      <div className="h-2 rounded-full transition-all" style={{ width: `${Math.min(100, (val/max)*100)}%`, background: color }}></div>
+    </div>
+  );
+
+  const objetifLabel = { masse: "💪 Prise de masse", perte: "🔥 Perte de poids", maintien: "⚖️ Maintien" }[objectif];
+  const calColor = calPct > 100 ? "#f87171" : calPct > 85 ? "#fbbf24" : "#86efac";
+
+  return (
+    <div className="px-4 pt-4 pb-32">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-bold">Nutrition 🍽️</h2>
+          <div className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>{objetifLabel}</div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowPoids(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚖️</button>
+          <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚙️</button>
+        </div>
+      </div>
+
+      {/* Carte calories du jour */}
+      <div className="card p-4 mb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-xs font-semibold mb-1" style={{ color: "var(--secondary)" }}>CALORIES AUJOURD'HUI</div>
+            <div className="text-2xl font-bold" style={{ color: calColor }}>{totCal} <span className="text-sm font-normal" style={{ color: "var(--secondary)" }}>/ {objectifs.cal} kcal</span></div>
+          </div>
+          <div className="text-right text-xs" style={{ color: "var(--secondary)" }}>
+            <div>{objectifs.cal - totCal > 0 ? `−${objectifs.cal - totCal} kcal restantes` : `+${totCal - objectifs.cal} kcal dépassées`}</div>
+          </div>
+        </div>
+        {calBar(totCal, objectifs.cal, calColor)}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          {[
+            { label: "Protéines", val: totProt, max: objectifs.prot, color: "#f9a8d4", unit: "g" },
+            { label: "Glucides",  val: totGluc, max: objectifs.gluc, color: "#93c5fd", unit: "g" },
+            { label: "Lipides",   val: totLipi, max: objectifs.lipi, color: "#fde68a", unit: "g" },
+          ].map(m => (
+            <div key={m.label} className="rounded-xl p-2" style={{ background: "var(--input-bg)" }}>
+              <div className="text-xs mb-1" style={{ color: "var(--secondary)" }}>{m.label}</div>
+              <div className="font-bold text-sm" style={{ color: m.color }}>{m.val}<span className="text-xs font-normal">/{m.max}{m.unit}</span></div>
+              {calBar(m.val, m.max || 1, m.color)}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Repas du jour */}
+      {MOMENTS_FOCUS.map(moment => {
+        const repas = repasJour.filter(r => r.moment === moment.id);
+        const momCal = repas.reduce((s,r) => s + (r.cal||0), 0);
+        return (
+          <div key={moment.id} className="card p-4 mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span>{moment.emoji}</span>
+                <span className="font-semibold text-sm">{moment.label}</span>
+                {momCal > 0 && <span className="text-xs" style={{ color: "var(--secondary)" }}>{momCal} kcal</span>}
+              </div>
+              <button onClick={() => setAddMoment(moment.id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold gradient-bg text-white">+</button>
+            </div>
+            {repas.length === 0
+              ? <div className="text-xs" style={{ color: "var(--secondary)" }}>Rien enregistré</div>
+              : repas.map(r => (
+                <div key={r.id} className="flex items-center justify-between py-1.5" style={{ borderTop: "1px solid var(--border)" }}>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{r.plat}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>
+                      {r.cal} kcal · P:{r.prot}g G:{r.gluc}g L:{r.lipi}g
+                    </div>
+                  </div>
+                  <button onClick={() => delRepas(r.id)} className="w-6 h-6 rounded-full flex items-center justify-center text-xs ml-2" style={{ color: "#f87171", background: "var(--input-bg)" }}>✕</button>
+                </div>
+              ))
+            }
+          </div>
+        );
+      })}
+
+      {/* Poids & courbe */}
+      <div className="card p-4 mb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-xs font-semibold mb-1" style={{ color: "var(--secondary)" }}>⚖️ POIDS</div>
+            <div className="text-xl font-bold">{dernierPoids ? `${dernierPoids.poids} kg` : "—"}</div>
+            {poids && <div className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>Départ: {poids} kg</div>}
+          </div>
+          <button onClick={() => setShowPoids(true)} className="gradient-bg text-white text-xs font-semibold px-3 py-1.5 rounded-xl">+ Peser</button>
+        </div>
+        {poidsLog.filter(p => p.uid === uid).length > 1 && (() => {
+          const sorted = [...poidsLog].filter(p => p.uid === uid).sort((a,b) => a.date?.localeCompare(b.date)).slice(-7);
+          const minP = Math.min(...sorted.map(p => p.poids)) - 0.5;
+          const maxP = Math.max(...sorted.map(p => p.poids)) + 0.5;
+          return (
+            <div className="flex items-end gap-1 h-12 mt-2">
+              {sorted.map((p, i) => {
+                const h = Math.max(4, Math.round(((p.poids - minP) / (maxP - minP || 1)) * 40));
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                    <div className="w-full rounded-sm" style={{ height: h + 'px', background: "#c084fc" }}></div>
+                    <div className="text-xs" style={{ color: "var(--secondary)", fontSize: "9px" }}>{p.poids}</div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Vue semaine calories */}
+      <div className="card p-4 mb-4">
+        <div className="text-xs font-semibold mb-3" style={{ color: "var(--secondary)" }}>SEMAINE — CALORIES</div>
+        <div className="flex items-end gap-1 h-16">
+          {calParJour.map((j, i) => {
+            const h = Math.max(4, Math.round((j.cal / maxCal) * 56));
+            const isToday = j.d === today;
+            const isActive = j.d === activeDay;
+            const color = j.cal >= objectifs.cal ? "#86efac" : j.cal > objectifs.cal * 0.8 ? "#fbbf24" : j.cal > 0 ? "#93c5fd" : "var(--border)";
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveDay(j.d)}>
+                <div className="w-full rounded-sm transition-all" style={{ height: h + 'px', background: isActive ? "#c084fc" : color, outline: isToday ? "2px solid #c084fc" : "none", outlineOffset: "1px" }}></div>
+                <div className="text-center" style={{ color: isActive ? "#c084fc" : "var(--secondary)", fontSize: "9px", fontWeight: isToday ? "700" : "400" }}>{jourLabels[i]}</div>
+                {j.cal > 0 && <div style={{ color: "var(--secondary)", fontSize: "8px" }}>{j.cal}</div>}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between mt-2">
+          <span className="text-xs" style={{ color: "var(--secondary)" }}>Tap sur un jour pour voir ses repas</span>
+          <span className="text-xs" style={{ color: "var(--secondary)" }}>Cible: {objectifs.cal} kcal</span>
+        </div>
+        {activeDay !== today && (
+          <div className="mt-2 text-xs text-center py-1 rounded-lg" style={{ background: "rgba(192,132,252,0.15)", color: "#c084fc" }}>
+            📅 Vue du {activeDay} · <span className="underline cursor-pointer" onClick={() => setActiveDay(today)}>Retour à aujourd'hui</span>
+          </div>
+        )}
+      </div>
+
+      {showSettings && (
+        <FocusRepasSettings objectif={objectif} poids={poids} activite={activite} objectifs={objectifs}
+          onClose={() => setShowSettings(false)} onSave={saveSettings} />
+      )}
+      {addMoment && (
+        <FocusRepasAddModal moment={addMoment} onClose={() => setAddMoment(null)}
+          onSave={(form) => { addRepas({ ...form, moment: addMoment }); setAddMoment(null); }} />
+      )}
+      {showPoids && (
+        <FocusPoidsModal current={dernierPoids?.poids} onClose={() => setShowPoids(false)}
+          onSave={(p) => { addPoids(p); setShowPoids(false); }} />
+      )}
+    </div>
+  );
+}
+
+function FocusRepasSettings({ objectif, poids, activite, objectifs, onClose, onSave }) {
+  const [o, setO] = useState(objectif);
+  const [p, setP] = useState(poids);
+  const [a, setA] = useState(activite);
+  const preview = calcNutriObjectifs(p, a, o);
+
+  const OBJ = [{ id:"masse", label:"💪 Prise de masse" }, { id:"perte", label:"🔥 Perte de poids" }, { id:"maintien", label:"⚖️ Maintien" }];
+  const ACT = [{ id:"sedentaire", label:"🪑 Sédentaire" }, { id:"modere", label:"🚶 Modéré" }, { id:"actif", label:"🏃 Actif" }, { id:"tres-actif", label:"🏋️ Très actif" }];
+
+  return (
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl overflow-y-auto p-6" style={{ background: "var(--card)", maxHeight: "90vh", paddingBottom: "32px" }} onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-4">⚙️ Objectif nutritionnel</h3>
+        <div className="mb-4">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>MON OBJECTIF</label>
+          <div className="flex flex-col gap-2">
+            {OBJ.map(opt => (
+              <button key={opt.id} onClick={() => setO(opt.id)} className="py-3 rounded-xl font-semibold text-sm text-left px-4 transition-all"
+                style={{ background: o === opt.id ? "rgba(192,132,252,0.18)" : "var(--input-bg)", color: o === opt.id ? "#c084fc" : "var(--text)", border: o === opt.id ? "1px solid rgba(192,132,252,0.4)" : "1px solid transparent" }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mb-4">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>POIDS ACTUEL (KG)</label>
+          <input className="input w-full" type="number" placeholder="ex: 75" value={p} onChange={e => setP(e.target.value)} />
+        </div>
+        <div className="mb-5">
+          <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>NIVEAU D'ACTIVITÉ</label>
+          <div className="grid grid-cols-2 gap-2">
+            {ACT.map(opt => (
+              <button key={opt.id} onClick={() => setA(opt.id)} className="py-2 rounded-xl text-sm font-medium transition-all"
+                style={{ background: a === opt.id ? "rgba(192,132,252,0.18)" : "var(--input-bg)", color: a === opt.id ? "#c084fc" : "var(--secondary)", border: a === opt.id ? "1px solid rgba(192,132,252,0.4)" : "1px solid transparent" }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {p && (
+          <div className="mb-4 p-3 rounded-xl" style={{ background: "rgba(134,239,172,0.1)", border: "1px solid rgba(134,239,172,0.3)" }}>
+            <div className="text-xs font-semibold mb-1" style={{ color: "#86efac" }}>OBJECTIFS CALCULÉS</div>
+            <div className="text-sm" style={{ color: "var(--text)" }}>{preview.cal} kcal · P:{preview.prot}g · G:{preview.gluc}g · L:{preview.lipi}g</div>
+          </div>
+        )}
+        <button onClick={() => { onSave(o, p, a); onClose(); }} className="gradient-bg text-white font-semibold w-full py-3 rounded-xl">Enregistrer</button>
+      </div>
+    </div>
+  );
+}
+
+function FocusRepasAddModal({ moment: momentId, onClose, onSave }) {
+  const mom = MOMENTS_FOCUS.find(m => m.id === momentId);
+  const [plat, setPlat]   = useState("");
+  const [cal, setCal]     = useState("");
+  const [prot, setProt]   = useState("");
+  const [gluc, setGluc]   = useState("");
+  const [lipi, setLipi]   = useState("");
+  const [search, setSearch] = useState("");
+  const [showQuick, setShowQuick] = useState(false);
+
+  const filtered = ALIMENTS_RAPIDES.filter(a => a.nom.toLowerCase().includes(search.toLowerCase()));
+
+  const selectAliment = (a) => {
+    setPlat(a.nom); setCal(String(a.cal)); setProt(String(a.p)); setGluc(String(a.g)); setLipi(String(a.l));
+    setShowQuick(false);
+  };
+
+  const valid = plat && cal;
+
+  return (
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl overflow-y-auto p-6" style={{ background: "var(--card)", maxHeight: "90vh", paddingBottom: "32px" }} onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-1">{mom?.emoji} {mom?.label}</h3>
+        <p className="text-xs mb-4" style={{ color: "var(--secondary)" }}>Ajouter un aliment ou repas</p>
+
+        {/* Recherche rapide */}
+        <button onClick={() => setShowQuick(!showQuick)} className="w-full py-2 rounded-xl text-sm font-medium mb-3 transition-all"
+          style={{ background: showQuick ? "rgba(192,132,252,0.15)" : "var(--input-bg)", color: showQuick ? "#c084fc" : "var(--secondary)", border: showQuick ? "1px solid rgba(192,132,252,0.4)" : "1px solid transparent" }}>
+          🔍 Aliments rapides
+        </button>
+        {showQuick && (
+          <div className="mb-3">
+            <input className="input w-full mb-2" placeholder="Rechercher…" value={search} onChange={e => setSearch(e.target.value)} />
+            <div className="overflow-y-auto" style={{ maxHeight: "160px" }}>
+              {filtered.map((a, i) => (
+                <button key={i} onClick={() => selectAliment(a)} className="w-full text-left px-3 py-2 rounded-lg mb-1 text-sm"
+                  style={{ background: "var(--input-bg)" }}>
+                  <span className="font-medium">{a.nom}</span>
+                  <span className="ml-2 text-xs" style={{ color: "var(--secondary)" }}>{a.cal} kcal · P:{a.p}g G:{a.g}g L:{a.l}g</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <input className="input w-full mb-3" placeholder="Nom du repas / aliment" value={plat} onChange={e => setPlat(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <input className="input" type="number" placeholder="Calories (kcal) *" value={cal} onChange={e => setCal(e.target.value)} />
+          <input className="input" type="number" placeholder="Protéines (g)" value={prot} onChange={e => setProt(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          <input className="input" type="number" placeholder="Glucides (g)" value={gluc} onChange={e => setGluc(e.target.value)} />
+          <input className="input" type="number" placeholder="Lipides (g)" value={lipi} onChange={e => setLipi(e.target.value)} />
+        </div>
+        <button onClick={() => { if (valid) onSave({ plat, cal: +cal, prot: +prot||0, gluc: +gluc||0, lipi: +lipi||0 }); }}
+          disabled={!valid} className="gradient-bg text-white font-semibold w-full py-4 rounded-xl disabled:opacity-40 text-base">
+          Ajouter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FocusPoidsModal({ current, onClose, onSave }) {
+  const [p, setP] = useState(current ? String(current) : "");
+  return (
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-4">⚖️ Peser aujourd'hui</h3>
+        <input className="input w-full mb-2" type="number" step="0.1" placeholder="Poids en kg (ex: 76.5)" value={p} onChange={e => setP(e.target.value)} />
+        <p className="text-xs mb-5" style={{ color: "var(--secondary)" }}>À faire le matin, à jeun, pour plus de précision.</p>
+        <button onClick={() => { if (p) onSave(p); }} disabled={!p} className="gradient-bg text-white font-semibold w-full py-4 rounded-xl disabled:opacity-40 text-base">
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RepasTab({ spaceId, user, members }) {
   const [addSlot, setAddSlot]   = useState(null); // { jour, moment }
   const [editItem, setEditItem] = useState(null);
@@ -3049,7 +3453,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
         <>
           {activeTab === "focus_today" && <FocusScreen spaceId={space.id} user={user} />}
           {activeTab === "depenses"    && <DepensesTab spaceId={space.id} user={user} members={members} />}
-          {activeTab === "repas"       && <RepasTab    spaceId={space.id} user={user} members={members} />}
+          {activeTab === "repas"       && <FocusRepasTab spaceId={space.id} user={user} />}
         </>
       ) : spaceMode === "coworking" ? (
         <>
