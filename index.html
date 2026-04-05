@@ -74,7 +74,7 @@ const useConfirm = () => {
   const handleYes = () => { state.resolve(true);  setState({ open: false, message: '', resolve: null }); };
   const handleNo  = () => { state.resolve(false); setState({ open: false, message: '', resolve: null }); };
   const ConfirmModal = state.open ? (
-    <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 400 }} style={{ background: 'rgba(0,0,0,0.65)' }}>
+    <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 400, background: 'rgba(0,0,0,0.65)' }}>
       <div className="rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
         <p className="text-base mb-5 text-center" style={{ color: 'var(--text)' }}>{state.message}</p>
         <div className="flex gap-3">
@@ -1834,7 +1834,7 @@ function DepensesSettings({ user, salaire, roundUpStep, onClose, onSave }) {
   const [r, setR] = useState(String(roundUpStep));
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400 }} style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-4">⚙️ Paramètres financiers</h3>
         <div className="mb-4">
@@ -1952,7 +1952,7 @@ function RepasModal({ slot, existing, onClose, onSave, onDelete }) {
   const [notes, setNotes] = useState(existing?.notes || "");
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400 }} style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "90vh", overflowY: "auto", paddingBottom: "120px" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-1">{slot.jour} — {slot.moment} 🍽️</h3>
         <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>{existing ? "Modifier le repas" : "Ajouter un repas"}</p>
