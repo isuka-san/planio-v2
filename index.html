@@ -1772,62 +1772,58 @@ function DepensesModal({ members, user, roundUpStep = 5, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400 }} style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl flex flex-col" style={{ background: "var(--card)", maxHeight: "88vh" }} onClick={e => e.stopPropagation()}>
-        <div className="overflow-y-auto p-6 flex-1">
-          <h3 className="text-lg font-bold mb-4">Nouvelle dépense 💸</h3>
-          <div className="flex gap-2 mb-4">
-            <button onClick={() => setCategorie("perso")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
-              style={{ background: categorie === "perso" ? "rgba(134,239,172,0.15)" : "var(--input-bg)", color: categorie === "perso" ? "#86efac" : "var(--secondary)", border: categorie === "perso" ? "1px solid rgba(134,239,172,0.4)" : "1px solid transparent" }}>
-              🏠 Perso
-            </button>
-            <button onClick={() => setCategorie("pro")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
-              style={{ background: categorie === "pro" ? "rgba(147,197,253,0.15)" : "var(--input-bg)", color: categorie === "pro" ? "#93c5fd" : "var(--secondary)", border: categorie === "pro" ? "1px solid rgba(147,197,253,0.4)" : "1px solid transparent" }}>
-              💼 Pro
-            </button>
-          </div>
-          <input className="input w-full mb-3" placeholder="Description (ex: Restaurant)" value={titre} onChange={e => setTitre(e.target.value)} />
-          <input className="input w-full mb-2" type="number" placeholder="Montant (€)" value={montant} onChange={e => setMontant(e.target.value)} />
-          {roundUp > 0 && (
-            <div className="mb-3 p-3 rounded-xl flex items-center gap-2" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.3)" }}>
-              <span>💰</span>
-              <span className="text-sm" style={{ color: "#c084fc" }}>
-                {montantNum.toFixed(2)} € → arrondi à <strong>{(montantNum + roundUp).toFixed(2)} €</strong>, <strong>+{roundUp.toFixed(2)} € en épargne</strong>
-              </span>
-            </div>
-          )}
-          <div className="mb-3">
-            <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PAYÉ PAR</div>
-            <div className="flex flex-wrap gap-2">
-              {members.map(m => (
-                <button key={m.uid} onClick={() => setPayeur(m.uid)}
-                  className="px-3 py-1 rounded-full text-sm font-medium transition-all"
-                  style={{ background: payeur === m.uid ? "var(--accent)" : "var(--input-bg)", color: payeur === m.uid ? "#fff" : "var(--text)" }}>
-                  {getMemberName(m.uid)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mb-2">
-            <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PARTICIPANTS</div>
-            <div className="flex flex-wrap gap-2">
-              {members.map(m => (
-                <button key={m.uid} onClick={() => toggleParticipant(m.uid)}
-                  className="px-3 py-1 rounded-full text-sm font-medium transition-all"
-                  style={{ background: participants.includes(m.uid) ? "var(--accent)" : "var(--input-bg)", color: participants.includes(m.uid) ? "#fff" : "var(--text)" }}>
-                  {getMemberName(m.uid)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="px-6 pt-3" style={{ paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid var(--border)" }}>
-          <button onClick={() => { if (titre && montant && participants.length > 0) onSave({ titre, montant, categorie, payeur, participants }); }}
-            disabled={!titre || !montant || participants.length === 0}
-            className="gradient-bg text-white font-semibold w-full py-3 rounded-xl disabled:opacity-40">
-            {roundUp > 0 ? `Ajouter (+${roundUp.toFixed(2)} € épargne 💰)` : "Ajouter la dépense"}
+    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-md rounded-t-3xl overflow-y-auto p-6" style={{ background: "var(--card)", maxHeight: "88vh", paddingBottom: "32px" }} onClick={e => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-4">Nouvelle dépense 💸</h3>
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setCategorie("perso")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{ background: categorie === "perso" ? "rgba(134,239,172,0.15)" : "var(--input-bg)", color: categorie === "perso" ? "#86efac" : "var(--secondary)", border: categorie === "perso" ? "1px solid rgba(134,239,172,0.4)" : "1px solid transparent" }}>
+            🏠 Perso
+          </button>
+          <button onClick={() => setCategorie("pro")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
+            style={{ background: categorie === "pro" ? "rgba(147,197,253,0.15)" : "var(--input-bg)", color: categorie === "pro" ? "#93c5fd" : "var(--secondary)", border: categorie === "pro" ? "1px solid rgba(147,197,253,0.4)" : "1px solid transparent" }}>
+            💼 Pro
           </button>
         </div>
+        <input className="input w-full mb-3" placeholder="Description (ex: Restaurant)" value={titre} onChange={e => setTitre(e.target.value)} />
+        <input className="input w-full mb-2" type="number" placeholder="Montant (€)" value={montant} onChange={e => setMontant(e.target.value)} />
+        {roundUp > 0 && (
+          <div className="mb-3 p-3 rounded-xl flex items-center gap-2" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.3)" }}>
+            <span>💰</span>
+            <span className="text-sm" style={{ color: "#c084fc" }}>
+              {montantNum.toFixed(2)} € → arrondi à <strong>{(montantNum + roundUp).toFixed(2)} €</strong>, <strong>+{roundUp.toFixed(2)} € en épargne</strong>
+            </span>
+          </div>
+        )}
+        <div className="mb-3">
+          <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PAYÉ PAR</div>
+          <div className="flex flex-wrap gap-2">
+            {members.map(m => (
+              <button key={m.uid} onClick={() => setPayeur(m.uid)}
+                className="px-3 py-1 rounded-full text-sm font-medium transition-all"
+                style={{ background: payeur === m.uid ? "var(--accent)" : "var(--input-bg)", color: payeur === m.uid ? "#fff" : "var(--text)" }}>
+                {getMemberName(m.uid)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mb-4">
+          <div className="text-xs font-semibold mb-2" style={{ color: "var(--secondary)" }}>PARTICIPANTS</div>
+          <div className="flex flex-wrap gap-2">
+            {members.map(m => (
+              <button key={m.uid} onClick={() => toggleParticipant(m.uid)}
+                className="px-3 py-1 rounded-full text-sm font-medium transition-all"
+                style={{ background: participants.includes(m.uid) ? "var(--accent)" : "var(--input-bg)", color: participants.includes(m.uid) ? "#fff" : "var(--text)" }}>
+                {getMemberName(m.uid)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button onClick={() => { if (titre && montant && participants.length > 0) onSave({ titre, montant, categorie, payeur, participants }); }}
+          disabled={!titre || !montant || participants.length === 0}
+          className="gradient-bg text-white font-semibold w-full py-4 rounded-xl disabled:opacity-40 text-base">
+          {roundUp > 0 ? `Ajouter (+${roundUp.toFixed(2)} € épargne 💰)` : "Ajouter la dépense"}
+        </button>
       </div>
     </div>
   );
