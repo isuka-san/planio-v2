@@ -2342,6 +2342,9 @@ function FocusPoidsModal({ current, onClose, onSave }) {
   );
 }
 
+const JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+const MOMENTS = ["Matin","Midi","Soir"];
+
 function RepasTab({ spaceId, user, members }) {
   const [addSlot, setAddSlot]   = useState(null); // { jour, moment }
   const [editItem, setEditItem] = useState(null);
