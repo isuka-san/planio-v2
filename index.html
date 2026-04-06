@@ -2346,11 +2346,17 @@ const JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"
 const MOMENTS = ["Matin","Midi","Soir"];
 
 function RepasTab({ spaceId, user, members }) {
-  const [addSlot, setAddSlot]   = useState(null); // { jour, moment }
+  const [view, setView]         = useState("planning");
+  const [addSlot, setAddSlot]   = useState(null);
   const [editItem, setEditItem] = useState(null);
-  const path = spaceId ? `spaces/${spaceId}/repas` : null;
-  const repas = useCollection(path);
+  const [newCourse, setNewCourse] = useState("");
 
+  const path        = spaceId ? `spaces/${spaceId}/repas`    : null;
+  const coursesPath = spaceId ? `spaces/${spaceId}/courses`  : null;
+  const repas   = useCollection(path);
+  const courses = useCollection(coursesPath);
+
+  // Planning CRUD
   const add = async (form) => {
     try {
       await db.collection(path).add({
@@ -2358,72 +2364,153 @@ function RepasTab({ spaceId, user, members }) {
         plat: form.plat, notes: form.notes || "",
         by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-    } catch(e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
+    } catch(e) { console.error(e); }
   };
-
   const edit = async (id, form) => {
     try { await db.collection(path).doc(id).update({ plat: form.plat, notes: form.notes || "" }); }
     catch(e) { console.error(e); }
   };
-
   const del = async (id) => {
     try { await db.collection(path).doc(id).delete(); }
     catch(e) { console.error(e); }
   };
-
   const getRepas = (jour, moment) => repas.find(r => r.jour === jour && r.moment === moment);
+
+  // Courses CRUD
+  const addCourse = async () => {
+    if (!coursesPath || !newCourse.trim()) return;
+    await db.collection(coursesPath).add({ nom: newCourse.trim(), fait: false, by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    setNewCourse("");
+  };
+  const toggleCourse = async (id, fait) => {
+    if (!coursesPath) return;
+    await db.collection(coursesPath).doc(id).update({ fait: !fait });
+  };
+  const deleteCourse = async (id) => {
+    if (!coursesPath) return;
+    await db.collection(coursesPath).doc(id).delete();
+  };
+  const clearDone = () => courses.filter(c => c.fait).forEach(c => deleteCourse(c.id));
+
+  const todo = courses.filter(c => !c.fait);
+  const done = courses.filter(c => c.fait);
 
   return (
     <div className="px-4 pt-4 pb-32">
-      <div className="flex items-center justify-between mb-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold">Repas 🍽️</h2>
       </div>
 
-      <div className="overflow-x-auto -mx-4 px-4">
-        <div style={{ minWidth: "340px" }}>
-          {/* En-tête moments */}
-          <div className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
-            <div />
-            {MOMENTS.map(m => (
-              <div key={m} className="text-center text-xs font-semibold" style={{ color: "var(--secondary)" }}>{m}</div>
-            ))}
-          </div>
-
-          {/* Lignes jours */}
-          {JOURS.map(jour => (
-            <div key={jour} className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
-              <div className="flex items-center text-sm font-medium" style={{ color: "var(--secondary)" }}>{jour}</div>
-              {MOMENTS.map(moment => {
-                const r = getRepas(jour, moment);
-                return (
-                  <div key={moment}
-                    onClick={() => r ? setEditItem(r) : setAddSlot({ jour, moment })}
-                    className="rounded-xl p-2 min-h-12 flex flex-col items-center justify-center cursor-pointer transition-all"
-                    style={{ background: r ? "var(--card)" : "var(--input-bg)", border: r ? "1px solid var(--border)" : "1px dashed var(--border)" }}>
-                    {r ? (
-                      <>
-                        <span className="text-xs font-semibold text-center leading-tight">{r.plat}</span>
-                        <UserBadge uid={r.by} members={members} />
-                      </>
-                    ) : (
-                      <span className="text-lg" style={{ color: "var(--border)" }}>+</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+      {/* Onglets Planning / Courses */}
+      <div className="flex mb-4 p-1 rounded-xl" style={{ background: "var(--input-bg)" }}>
+        <button onClick={() => setView("planning")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+          style={{ background: view === "planning" ? "var(--card)" : "transparent", color: view === "planning" ? "var(--text)" : "var(--secondary)" }}>
+          📋 Planning
+        </button>
+        <button onClick={() => setView("courses")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+          style={{ background: view === "courses" ? "var(--card)" : "transparent", color: view === "courses" ? "var(--text)" : "var(--secondary)" }}>
+          🛒 Courses {todo.length > 0 && <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full gradient-bg text-white">{todo.length}</span>}
+        </button>
       </div>
 
-      {addSlot && (
-        <RepasModal slot={addSlot} onClose={() => setAddSlot(null)} onSave={(form) => { add({ ...addSlot, ...form }); setAddSlot(null); }} />
-      )}
-      {editItem && (
-        <RepasModal slot={editItem} existing={editItem} onClose={() => setEditItem(null)}
-          onSave={(form) => { edit(editItem.id, form); setEditItem(null); }}
-          onDelete={() => { del(editItem.id); setEditItem(null); }} />
-      )}
+      {/* Vue Planning */}
+      {view === "planning" && <>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <div style={{ minWidth: "340px" }}>
+            <div className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
+              <div />
+              {MOMENTS.map(m => (
+                <div key={m} className="text-center text-xs font-semibold" style={{ color: "var(--secondary)" }}>{m}</div>
+              ))}
+            </div>
+            {JOURS.map(jour => (
+              <div key={jour} className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
+                <div className="flex items-center text-sm font-medium" style={{ color: "var(--secondary)" }}>{jour}</div>
+                {MOMENTS.map(moment => {
+                  const r = getRepas(jour, moment);
+                  return (
+                    <div key={moment}
+                      onClick={() => r ? setEditItem(r) : setAddSlot({ jour, moment })}
+                      className="rounded-xl p-2 min-h-12 flex flex-col items-center justify-center cursor-pointer transition-all"
+                      style={{ background: r ? "var(--card)" : "var(--input-bg)", border: r ? "1px solid var(--border)" : "1px dashed var(--border)" }}>
+                      {r ? (
+                        <>
+                          <span className="text-xs font-semibold text-center leading-tight">{r.plat}</span>
+                          <UserBadge uid={r.by} members={members} />
+                        </>
+                      ) : (
+                        <span className="text-lg" style={{ color: "var(--accent)" }}>+</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+        {addSlot && (
+          <RepasModal slot={addSlot} onClose={() => setAddSlot(null)} onSave={(form) => { add({ ...addSlot, ...form }); setAddSlot(null); }} />
+        )}
+        {editItem && (
+          <RepasModal slot={editItem} existing={editItem} onClose={() => setEditItem(null)}
+            onSave={(form) => { edit(editItem.id, form); setEditItem(null); }}
+            onDelete={() => { del(editItem.id); setEditItem(null); }} />
+        )}
+      </>}
+
+      {/* Vue Courses */}
+      {view === "courses" && <>
+        {/* Saisie */}
+        <div className="flex gap-2 mb-5">
+          <input className="input flex-1 rounded-xl px-3 py-2.5 text-sm" placeholder="Ajouter un article…"
+            value={newCourse} onChange={e => setNewCourse(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && addCourse()} />
+          <button onClick={addCourse}
+            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold gradient-bg text-white flex-shrink-0"
+            disabled={!newCourse.trim()} style={{ opacity: newCourse.trim() ? 1 : 0.4 }}>+</button>
+        </div>
+
+        {/* Liste vide */}
+        {courses.length === 0 && (
+          <div className="text-center py-10" style={{ color: "var(--secondary)" }}>
+            <div className="text-4xl mb-3">🛒</div>
+            <p className="text-sm">Liste vide — ajoute tes articles !</p>
+          </div>
+        )}
+
+        {/* Articles à acheter */}
+        {todo.map(c => (
+          <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl mb-2"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <button onClick={() => toggleCourse(c.id, c.fait)}
+              className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+              style={{ borderColor: "var(--accent)" }} />
+            <span className="flex-1 text-sm font-medium">{c.nom}</span>
+            <UserBadge uid={c.by} members={members} />
+            <button onClick={() => deleteCourse(c.id)} className="text-base opacity-30 hover:opacity-80 px-1"
+              style={{ color: "var(--secondary)" }}>✕</button>
+          </div>
+        ))}
+
+        {/* Articles achetés */}
+        {done.length > 0 && <>
+          <div className="flex items-center justify-between mt-5 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--secondary)" }}>Dans le panier ({done.length})</span>
+            <button onClick={clearDone} className="text-xs px-2 py-1 rounded-lg" style={{ color: "#f87171", background: "rgba(248,113,113,0.1)" }}>Vider</button>
+          </div>
+          {done.map(c => (
+            <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl mb-2 opacity-50"
+              style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+              <button onClick={() => toggleCourse(c.id, c.fait)}
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 gradient-bg text-white text-xs">✓</button>
+              <span className="flex-1 text-sm line-through">{c.nom}</span>
+              <button onClick={() => deleteCourse(c.id)} className="text-base opacity-30 hover:opacity-80 px-1"
+                style={{ color: "var(--secondary)" }}>✕</button>
+            </div>
+          ))}
+        </>}
+      </>}
     </div>
   );
 }
