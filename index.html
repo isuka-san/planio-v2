@@ -1918,6 +1918,9 @@ function FocusRepasTab({ spaceId, user }) {
   const [addMoment, setAddMoment]       = useState(null);
   const [showPoids, setShowPoids]       = useState(false);
   const [activeDay, setActiveDay]       = useState(today);
+  const [view, setView]                 = useState("nutrition");
+  const [addSlot, setAddSlot]           = useState(null);
+  const [editPlan, setEditPlan]         = useState(null);
 
   const uid = user.uid;
   const [objectif,  setObjectif]  = useState(() => localStorage.getItem(`pn_obj_${uid}`)    || "maintien");
@@ -1935,8 +1938,19 @@ function FocusRepasTab({ spaceId, user }) {
 
   const journalPath = spaceId ? `spaces/${spaceId}/repas_journal` : null;
   const poidsPath   = spaceId ? `spaces/${spaceId}/repas_poids`   : null;
+  const repasPath = spaceId ? `spaces/${spaceId}/repas` : null;
   const journal = useCollection(journalPath);
   const poidsLog = useCollection(poidsPath);
+  const planning = useCollection(repasPath);
+
+  const getRepas = (jour, moment) => planning.find(r => r.jour === jour && r.moment === moment);
+  const addPlan = async (form) => {
+    if (!repasPath) return;
+    await db.collection(repasPath).add({ jour: form.jour, moment: form.moment, plat: form.plat, notes: form.notes || "", by: uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  };
+  const editPlanItem = async (id, form) => { if (repasPath) await db.collection(repasPath).doc(id).update({ plat: form.plat, notes: form.notes || "" }); };
+  const delPlan = async (id) => { if (repasPath) await db.collection(repasPath).doc(id).delete(); };
+
 
   const addRepas = async (form) => {
     if (!journalPath) return;
@@ -1993,16 +2007,31 @@ function FocusRepasTab({ spaceId, user }) {
   return (
     <div className="px-4 pt-4 pb-32">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-bold">Nutrition 🍽️</h2>
-          <div className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>{objetifLabel}</div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowPoids(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚖️</button>
-          <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚙️</button>
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold">Repas 🍽️</h2>
+        {view === "nutrition" && (
+          <div className="flex gap-2">
+            <button onClick={() => setShowPoids(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚖️</button>
+            <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚙️</button>
+          </div>
+        )}
       </div>
+
+      {/* Onglets Nutrition / Planning */}
+      <div className="flex mb-4 p-1 rounded-xl" style={{ background: "var(--input-bg)" }}>
+        <button onClick={() => setView("nutrition")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+          style={{ background: view === "nutrition" ? "var(--card)" : "transparent", color: view === "nutrition" ? "var(--text)" : "var(--secondary)" }}>
+          🥗 Nutrition
+        </button>
+        <button onClick={() => setView("planning")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
+          style={{ background: view === "planning" ? "var(--card)" : "transparent", color: view === "planning" ? "var(--text)" : "var(--secondary)" }}>
+          📅 Planning
+        </button>
+      </div>
+
+      {view === "nutrition" && <div className="text-xs mb-3" style={{ color: "var(--secondary)" }}>{objetifLabel}</div>}
+
+      {view === "nutrition" && <>
 
       {/* Carte calories du jour */}
       <div className="card p-4 mb-3">
@@ -2134,9 +2163,54 @@ function FocusRepasTab({ spaceId, user }) {
         <FocusPoidsModal current={dernierPoids?.poids} onClose={() => setShowPoids(false)}
           onSave={(p) => { addPoids(p); setShowPoids(false); }} />
       )}
+      </>}
+
+      {/* Vue planning semaine */}
+      {view === "planning" && (
+        <div className="overflow-x-auto -mx-4 px-4">
+          <div style={{ minWidth: "320px" }}>
+            <div className="grid mb-2" style={{ gridTemplateColumns: "72px repeat(3, 1fr)", gap: "5px" }}>
+              <div />
+              {["Matin","Midi","Soir"].map(m => (
+                <div key={m} className="text-center text-xs font-semibold" style={{ color: "var(--secondary)" }}>{m}</div>
+              ))}
+            </div>
+            {["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"].map(jour => (
+              <div key={jour} className="grid mb-2" style={{ gridTemplateColumns: "72px repeat(3, 1fr)", gap: "5px" }}>
+                <div className="flex items-center text-xs font-medium" style={{ color: "var(--secondary)" }}>{jour}</div>
+                {["Matin","Midi","Soir"].map(moment => {
+                  const r = getRepas(jour, moment);
+                  return (
+                    <div key={moment}
+                      onClick={() => r ? setEditPlan(r) : setAddSlot({ jour, moment })}
+                      className="rounded-xl p-2 min-h-12 flex flex-col items-center justify-center cursor-pointer transition-all"
+                      style={{ background: r ? "var(--card)" : "var(--input-bg)", border: r ? "1px solid var(--border)" : "1px dashed var(--border)" }}>
+                      {r
+                        ? <span className="text-xs font-semibold text-center leading-tight">{r.plat}</span>
+                        : <span className="text-lg" style={{ color: "var(--border)" }}>+</span>
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {addSlot && (
+        <RepasModal slot={addSlot} onClose={() => setAddSlot(null)}
+          onSave={(form) => { addPlan({ ...addSlot, ...form }); setAddSlot(null); }} />
+      )}
+      {editPlan && (
+        <RepasModal slot={editPlan} existing={editPlan} onClose={() => setEditPlan(null)}
+          onSave={(form) => { editPlanItem(editPlan.id, form); setEditPlan(null); }}
+          onDelete={() => { delPlan(editPlan.id); setEditPlan(null); }} />
+      )}
     </div>
   );
 }
+
 
 function FocusRepasSettings({ objectif, poids, activite, objectifs, onClose, onSave }) {
   const [o, setO] = useState(objectif);
