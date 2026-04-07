@@ -801,7 +801,7 @@ function ActivitesTab({ spaceId, user, members }) {
       <div className="gradient-bg p-6 pb-4">
         <h2 className="text-white font-bold text-xl mb-4">Plans</h2>
         <div className="flex rounded-xl p-1 gap-1" style={{ background: "rgba(0,0,0,0.2)" }}>
-          {[["activites","🏄 Activités"], ["voyages","✈️ Voyages"]].map(([t, lbl]) => (
+          {[["activites","🎯 Activités"], ["voyages","✈️ Voyages"]].map(([t, lbl]) => (
             <button key={t} onClick={() => setSub(t)} className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
               style={sub === t ? { background: "white", color: "#be185d" } : { color: "white" }}>
               {lbl}
@@ -816,14 +816,15 @@ function ActivitesTab({ spaceId, user, members }) {
         </button>
 
         {items.length === 0
-          ? <EmptyState emoji={sub === "activites" ? "🏄" : "✈️"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
+          ? <EmptyState emoji={sub === "activites" ? "🎯" : "✈️"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
           : items.map(item => (
-            <div key={item.id} className="card p-4 mb-3" style={item.done ? { background: "linear-gradient(135deg, rgba(134,239,172,0.08), rgba(74,222,128,0.04))", border: "1px solid rgba(74,222,128,0.2)" } : {}}>
+            <div key={item.id} className="card p-4 mb-3" style={item.done ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(134,239,172,0.18), rgba(16,185,129,0.1))", border: "1px solid rgba(74,222,128,0.45)", boxShadow: "0 4px 24px rgba(74,222,128,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
+              {item.done && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{sub === "activites" ? "📸" : "🗺️"}</div>}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
-                    {item.done && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80" }}>✓ Souvenir</span>}
+                    <span className="font-semibold" style={{ color: item.done ? "#d1fae5" : "var(--text)", textShadow: item.done ? "0 0 10px rgba(74,222,128,0.25)" : "none" }}>{item.title}</span>
+                    {item.done && <span style={{ background: "linear-gradient(135deg, rgba(74,222,128,0.25), rgba(16,185,129,0.15))", color: "#86efac", border: "1px solid rgba(74,222,128,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(74,222,128,0.6)" }}>✨ Souvenir</span>}
                     <UserBadge uid={item.by} members={members} />
                   </div>
                   {item.desc && <p className="text-sm mb-1" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
@@ -847,7 +848,7 @@ function ActivitesTab({ spaceId, user, members }) {
 
       {modal && (
         <AddModal
-          title={sub === "activites" ? "Nouvelle activité 🏄" : "Nouveau voyage ✈️"}
+          title={sub === "activites" ? "Nouvelle activité 🎯" : "Nouveau voyage ✈️"}
           fields={[
             { key: "title", label: "Titre",       required: true },
             { key: "desc",  label: "Description", type: "textarea" },
@@ -978,14 +979,15 @@ function FilmsTab({ spaceId, user, members }) {
             const pct     = getProgress(item);
             const isSerie = item.type === "serie";
             return (
-              <div key={item.id} className="card p-4 mb-3" style={item.completed ? { background: "linear-gradient(135deg, rgba(167,139,250,0.08), rgba(139,92,246,0.04))", border: "1px solid rgba(139,92,246,0.2)" } : {}}>
+              <div key={item.id} className="card p-4 mb-3" style={item.completed ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(167,139,250,0.18), rgba(109,40,217,0.1))", border: "1px solid rgba(139,92,246,0.45)", boxShadow: "0 4px 24px rgba(139,92,246,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
+                {item.completed && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{isSerie ? "📺" : "🎬"}</div>}
                 {/* En-tête */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5"
-                    >>\n                      <span>🎥</span>
-                      <span className="font-semibold text-sm leading-tight" style={{ color: "var(--text)" }}>{item.title}</span>
-                      {item.completed && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa" }}>✓ Vu</span>}
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <span>{isSerie ? "📺" : "🎬"}</span>
+                      <span className="font-semibold text-sm leading-tight" style={{ color: item.completed ? "#ede9fe" : "var(--text)", textShadow: item.completed ? "0 0 10px rgba(139,92,246,0.25)" : "none" }}>{item.title}</span>
+                      {item.completed && <span style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(109,40,217,0.15))", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(139,92,246,0.6)" }}>✨ Vu</span>}
                       <UserBadge uid={item.by} members={members} />
                     </div>
                     {item.genre && <span className="inline-block text-xs px-2 py-0.5 rounded-full mt-0.5" style={{ background:"#2d1a40", color:"#d8b4fe" }}>{item.genre}</span>}
@@ -1165,7 +1167,7 @@ function ProgressModal({ item, onClose, onSave }) {
   const [season,  setSeason]  = useState(item.currentSeason || 1);
   const [episode, setEpisode] = useState(item.currentEpisode || 0);
   const [mins,    setMins]    = useState(item.watchedMinutes || 0);
-  const fmtTime = m => m < 60 ? `${m}min` : `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,"0"): ""}h`;
+  const fmtTime = m => m < 60 ? `${m}min` : `${Math.floor(m/60)}h${m%60>0?String(m%60).padStart(2,"0"):""}`;
   const pct = isSerie
     ? Math.min(100, Math.round(((season-1)*(item.episodesPerSeason||1)+episode) / ((item.totalSeasons||1)*(item.episodesPerSeason||1)) * 100))
     : Math.min(100, Math.round(mins / (item.duration||1) * 100));
@@ -1368,12 +1370,13 @@ function JeuxTab({ spaceId, user, members }) {
         {filtered.length === 0
           ? <EmptyState emoji="🎮" text="Aucun jeu ici !" />
           : filtered.map(jeu => (
-            <div key={jeu.id} className="card p-4 mb-3" style={jeu.played ? { background: "linear-gradient(135deg, rgba(251,191,36,0.08), rgba(245,158,11,0.04))", border: "1px solid rgba(245,158,11,0.2)" } : {}}>
+            <div key={jeu.id} className="card p-4 mb-3" style={jeu.played ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(217,119,6,0.1))", border: "1px solid rgba(245,158,11,0.45)", boxShadow: "0 4px 24px rgba(245,158,11,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
+              {jeu.played && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>🎮</div>}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-semibold" style={{ color: "var(--text)" }}>{jeu.title}</span>
-                    {jeu.played && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(245,158,11,0.15)", color: "#fbbf24" }}>✓ Joué</span>}
+                    <span className="font-semibold" style={{ color: jeu.played ? "#fef3c7" : "var(--text)", textShadow: jeu.played ? "0 0 10px rgba(245,158,11,0.25)" : "none" }}>{jeu.title}</span>
+                    {jeu.played && <span style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.25), rgba(217,119,6,0.15))", color: "#fcd34d", border: "1px solid rgba(245,158,11,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(245,158,11,0.6)" }}>✨ Joué</span>}
                     <UserBadge uid={jeu.by} members={members} />
                   </div>
                   {jeu.type && <span className="inline-block text-xs px-2 py-0.5 rounded-full mb-1" style={{ background: "#1a3a2a", color: "#4ade80" }}>{jeu.type}</span>}
@@ -1465,12 +1468,13 @@ function IdeesTab({ spaceId, user, members }) {
       {filtered.length === 0
         ? <EmptyState emoji="⭐" text="pas d'idée" />
         : filtered.map(idee => (
-          <div key={idee.id} className="card p-4 mb-3" style={idee.done ? { background: "linear-gradient(135deg, rgba(249,168,212,0.08), rgba(236,72,153,0.04))", border: "1px solid rgba(236,72,153,0.2)" } : {}}>
+          <div key={idee.id} className="card p-4 mb-3" style={idee.done ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(249,168,212,0.18), rgba(190,24,93,0.1))", border: "1px solid rgba(236,72,153,0.45)", boxShadow: "0 4px 24px rgba(236,72,153,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
+            {idee.done && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>✨</div>}
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="font-semibold" style={{ color: "var(--text)" }}>{idee.title}</span>
-                  {idee.done && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(236,72,153,0.15)", color: "#f472b6" }}>✓ Fait</span>}
+                  <span className="font-semibold" style={{ color: idee.done ? "#fce7f3" : "var(--text)", textShadow: idee.done ? "0 0 10px rgba(236,72,153,0.25)" : "none" }}>{idee.title}</span>
+                  {idee.done && <span style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.25), rgba(190,24,93,0.15))", color: "#f9a8d4", border: "1px solid rgba(236,72,153,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(236,72,153,0.6)" }}>✨ Réalisé</span>}
                   <UserBadge uid={idee.by} members={members} />
                 </div>
                 {idee.desc && <p className="text-sm" style={{ color: "var(--secondary)" }}>{idee.desc}</p>}
