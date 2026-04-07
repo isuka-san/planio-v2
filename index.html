@@ -818,11 +818,12 @@ function ActivitesTab({ spaceId, user, members }) {
         {items.length === 0
           ? <EmptyState emoji={sub === "activites" ? "🏄" : "✈️"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
           : items.map(item => (
-            <div key={item.id} className="card p-4 mb-3" style={item.done ? { opacity: 0.45 } : {}}>
+            <div key={item.id} className="card p-4 mb-3" style={item.done ? { background: "linear-gradient(135deg, rgba(134,239,172,0.08), rgba(74,222,128,0.04))", border: "1px solid rgba(74,222,128,0.2)" } : {}}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`font-semibold ${item.done ? "line-through" : ""}`} style={{ color: item.done ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{item.title}</span>
+                    {item.done && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(74,222,128,0.15)", color: "#4ade80" }}>✓ Souvenir</span>}
                     <UserBadge uid={item.by} members={members} />
                   </div>
                   {item.desc && <p className="text-sm mb-1" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
@@ -977,14 +978,14 @@ function FilmsTab({ spaceId, user, members }) {
             const pct     = getProgress(item);
             const isSerie = item.type === "serie";
             return (
-              <div key={item.id} className="card p-4 mb-3" style={item.completed ? { opacity: 0.55 } : {}}>
+              <div key={item.id} className="card p-4 mb-3" style={item.completed ? { background: "linear-gradient(135deg, rgba(167,139,250,0.08), rgba(139,92,246,0.04))", border: "1px solid rgba(139,92,246,0.2)" } : {}}>
                 {/* En-tête */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5"
                     >>\n                      <span>🎥</span>
-                      <span className={`font-semibold text-sm leading-tight ${item.completed?"line-through":""}`}
-                        style={{ color: item.completed ? "var(--inactive)" : "var(--text)" }}>{item.title}</span>
+                      <span className="font-semibold text-sm leading-tight" style={{ color: "var(--text)" }}>{item.title}</span>
+                      {item.completed && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa" }}>✓ Vu</span>}
                       <UserBadge uid={item.by} members={members} />
                     </div>
                     {item.genre && <span className="inline-block text-xs px-2 py-0.5 rounded-full mt-0.5" style={{ background:"#2d1a40", color:"#d8b4fe" }}>{item.genre}</span>}
@@ -1367,11 +1368,12 @@ function JeuxTab({ spaceId, user, members }) {
         {filtered.length === 0
           ? <EmptyState emoji="🎮" text="Aucun jeu ici !" />
           : filtered.map(jeu => (
-            <div key={jeu.id} className="card p-4 mb-3" style={jeu.played ? { opacity: 0.5 } : {}}>
+            <div key={jeu.id} className="card p-4 mb-3" style={jeu.played ? { background: "linear-gradient(135deg, rgba(251,191,36,0.08), rgba(245,158,11,0.04))", border: "1px solid rgba(245,158,11,0.2)" } : {}}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`font-semibold ${jeu.played ? "line-through" : ""}`} style={{ color: jeu.played ? "var(--inactive)" : "var(--text)" }}>{jeu.title}</span>
+                    <span className="font-semibold" style={{ color: "var(--text)" }}>{jeu.title}</span>
+                    {jeu.played && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(245,158,11,0.15)", color: "#fbbf24" }}>✓ Joué</span>}
                     <UserBadge uid={jeu.by} members={members} />
                   </div>
                   {jeu.type && <span className="inline-block text-xs px-2 py-0.5 rounded-full mb-1" style={{ background: "#1a3a2a", color: "#4ade80" }}>{jeu.type}</span>}
@@ -1463,11 +1465,12 @@ function IdeesTab({ spaceId, user, members }) {
       {filtered.length === 0
         ? <EmptyState emoji="⭐" text="pas d'idée" />
         : filtered.map(idee => (
-          <div key={idee.id} className="card p-4 mb-3" style={idee.done ? { opacity: 0.45 } : {}}>
+          <div key={idee.id} className="card p-4 mb-3" style={idee.done ? { background: "linear-gradient(135deg, rgba(249,168,212,0.08), rgba(236,72,153,0.04))", border: "1px solid rgba(236,72,153,0.2)" } : {}}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className={`font-semibold ${idee.done ? "line-through" : ""}`} style={{ color: idee.done ? "var(--inactive)" : "var(--text)" }}>{idee.title}</span>
+                  <span className="font-semibold" style={{ color: "var(--text)" }}>{idee.title}</span>
+                  {idee.done && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(236,72,153,0.15)", color: "#f472b6" }}>✓ Fait</span>}
                   <UserBadge uid={idee.by} members={members} />
                 </div>
                 {idee.desc && <p className="text-sm" style={{ color: "var(--secondary)" }}>{idee.desc}</p>}
