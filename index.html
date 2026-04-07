@@ -1736,7 +1736,7 @@ function DepensesModal({ members, user, roundUpStep, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl flex flex-col" style={{ background: "var(--card)", maxHeight: "88vh" }} onClick={e => e.stopPropagation()}>
         {/* Zone scrollable */}
         <div className="overflow-y-auto p-6 flex-1">
@@ -1811,7 +1811,7 @@ function DepensesSettings({ user, salaire, roundUpStep, onClose, onSave }) {
   const [r, setR] = useState(String(roundUpStep));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-4">⚙️ Paramètres financiers</h3>
 
