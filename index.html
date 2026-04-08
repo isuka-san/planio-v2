@@ -31,64 +31,36 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <style>
-    * { box-sizing: border-box; }
+    @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
     :root {
-      --bg:#0d1f17; --surface:#132a1e; --surface2:#1a3528;
-      --accent:#2d8a5e; --accent-light:#3dba7e;
-      --text:#f0f0f0; --text-muted:#8a8a9a;
-      --border:rgba(255,255,255,0.07); --radius:12px; --radius-sm:8px;
-      --grad1:#3dba7e; --grad2:#2d8a5e;
-      --card:#132a1e; --nav-bg:#0d1f17; --inactive:#8a8a9a; --secondary:#8a8a9a;
-      --input-bg:#1a3528; --input-border:rgba(255,255,255,0.07);
+      --grad1: #f9a8d4; --grad2: #c084fc;
+      --accent: #f472b6;
+      --bg: #0d0d14; --text: #f0eefa;
+      --card: #1a1527; --border: #2a2242;
+      --nav-bg: #12101e;
+      --inactive: #6b5f8a; --secondary: #9791b0;
+      --input-bg: #221c35; --input-border: #3a2f55;
     }
-    [data-theme="foret"] {
-      --bg:#0d1f17; --surface:#132a1e; --surface2:#1a3528;
-      --accent:#2d8a5e; --accent-light:#3dba7e;
-      --grad1:#3dba7e; --grad2:#2d8a5e;
-      --card:#132a1e; --nav-bg:#0d1f17; --input-bg:#1a3528;
-    }
-    [data-theme="minuit"] {
-      --bg:#0f0f1a; --surface:#161628; --surface2:#1d1d38;
-      --accent:#5b5bd6; --accent-light:#7c7cf0;
-      --grad1:#7c7cf0; --grad2:#5b5bd6;
-      --card:#161628; --nav-bg:#0f0f1a; --input-bg:#1d1d38;
-    }
-    [data-theme="ardoise"] {
-      --bg:#0f1117; --surface:#1a1d27; --surface2:#222533;
-      --accent:#4a7fa5; --accent-light:#6aafd4;
-      --grad1:#6aafd4; --grad2:#4a7fa5;
-      --card:#1a1d27; --nav-bg:#0f1117; --input-bg:#222533;
-    }
-    [data-theme="cerise"] {
-      --bg:#1a0d14; --surface:#261220; --surface2:#311828;
-      --accent:#a0294a; --accent-light:#d44070;
-      --grad1:#d44070; --grad2:#a0294a;
-      --card:#261220; --nav-bg:#1a0d14; --input-bg:#311828;
-    }
-    [data-theme="aurore"] {
-      --bg:#1a1108; --surface:#261a0d; --surface2:#322214;
-      --accent:#c47b2b; --accent-light:#e09b45;
-      --grad1:#e09b45; --grad2:#c47b2b;
-      --card:#261a0d; --nav-bg:#1a1108; --input-bg:#322214;
-    }
-    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); -webkit-tap-highlight-color:transparent; }
-    .gradient-bg { background:var(--accent); }
-    .card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); }
-    .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:var(--bg); border-top:1px solid var(--border); padding:8px 0 env(safe-area-inset-bottom); z-index:100; }
-    .tab-btn { transition:all 0.2s; color:var(--text-muted); }
-    .tab-btn.active { color:var(--accent-light); }
-    .filter-btn { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); transition:all 0.2s; }
-    .filter-btn.active { background:var(--accent); color:white; border-color:transparent; }
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:flex-end; }
-    .modal-content { background:var(--surface); border-radius:20px 20px 0 0; border-top:1px solid var(--border); width:100%; max-height:90vh; overflow-y:auto; padding:24px; padding-bottom:calc(24px + env(safe-area-inset-bottom)); }
-    input,select,textarea { outline:none; background:var(--surface2); border-color:var(--border) !important; color:var(--text); font-size:1rem; }
-    input::placeholder,textarea::placeholder { color:var(--text-muted); }
-    select { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 0.75rem center; padding-right:2.2rem !important; }
-    ::-webkit-scrollbar { display:none; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; }
+    .gradient-bg { background: linear-gradient(135deg, var(--grad1) 0%, var(--grad2) 100%); }
+    .card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav-bg); border-top: 1px solid var(--border); padding: 8px 0 env(safe-area-inset-bottom); z-index: 100; }
+    .tab-btn { transition: all 0.2s; color: var(--inactive); }
+    .tab-btn.active { color: var(--accent); }
+    .filter-btn { background: var(--input-bg); color: var(--secondary); border: 1px solid var(--border); transition: all 0.2s; }
+    .filter-btn.active { background: linear-gradient(135deg, var(--grad1) 0%, var(--grad2) 100%); color: white; border-color: transparent; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; display: flex; align-items: flex-end; }
+    .modal-content { background: var(--card); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    input, select, textarea { outline: none; background: var(--input-bg); border-color: var(--input-border) !important; color: var(--text); font-size: 1rem; }
+    input::placeholder, textarea::placeholder { color: var(--inactive); }
+    select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem !important; }
+    ::-webkit-scrollbar { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-
+<div id="root"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0d14;"><div style="background:linear-gradient(135deg,#f9a8d4,#c084fc);border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.4);"><p style="color:white;font-weight:700;font-size:1.5rem;margin:0;letter-spacing:0.05em;">Planio</p><p style="color:rgba(255,255,255,0.7);font-size:0.875rem;margin:10px 0 0;">Chargement…</p><div style="margin-top:16px;display:flex;gap:6px;justify-content:center;"><div style="width:8px;height:8px;border-radius:50%;background:white;opacity:0.9;animation:pulse 1.2s ease-in-out infinite;"></div><div style="width:8px;height:8px;border-radius:50%;background:white;opacity:0.9;animation:pulse 1.2s ease-in-out 0.2s infinite;"></div><div style="width:8px;height:8px;border-radius:50%;background:white;opacity:0.9;animation:pulse 1.2s ease-in-out 0.4s infinite;"></div></div></div></div></div>
 
 <script type="text/babel" data-presets="env,react">
 const { useState, useEffect } = React;
@@ -172,32 +144,63 @@ async function sendPingTo(spaceId, fromUser, fromUserData, target) {
 // ================================================================
 //  THÈMES
 // ================================================================
-//  THÈMES
-// ================================================================
 const THEMES = [
-  { id: "foret",   name: "Forêt",   accent: "#2d8a5e", light: "#3dba7e", bg: "#0d1f17" },
-  { id: "minuit",  name: "Minuit",  accent: "#5b5bd6", light: "#7c7cf0", bg: "#0f0f1a" },
-  { id: "ardoise", name: "Ardoise", accent: "#4a7fa5", light: "#6aafd4", bg: "#0f1117" },
-  { id: "cerise",  name: "Cerise",  accent: "#a0294a", light: "#d44070", bg: "#1a0d14" },
-  { id: "aurore",  name: "Aurore",  accent: "#c47b2b", light: "#e09b45", bg: "#1a1108" },
+  {
+    id: "mauve", name: "Mauve",
+    grad1: "#f9a8d4", grad2: "#c084fc", accent: "#f472b6",
+    bg: "#0d0d14", text: "#f0eefa", card: "#1a1527", border: "#2a2242",
+    navBg: "#12101e", inactive: "#6b5f8a", secondary: "#9791b0",
+    inputBg: "#221c35", inputBorder: "#3a2f55",
+  },
+  {
+    id: "vert", name: "Vert",
+    grad1: "#86efac", grad2: "#10b981", accent: "#34d399",
+    bg: "#061210", text: "#e8fdf5", card: "#0d1f18", border: "#1a3d2a",
+    navBg: "#060f0d", inactive: "#4a7a65", secondary: "#6aab8e",
+    inputBg: "#0f2a1e", inputBorder: "#1e4d35",
+  },
+  {
+    id: "orange", name: "Orange",
+    grad1: "#fdba74", grad2: "#f97316", accent: "#fb923c",
+    bg: "#110a04", text: "#fff1e6", card: "#1f1208", border: "#3d2010",
+    navBg: "#0e0804", inactive: "#7a5a3a", secondary: "#a07858",
+    inputBg: "#2a1a0a", inputBorder: "#4a2f12",
+  },
+  {
+    id: "rouge", name: "Rouge",
+    grad1: "#fca5a5", grad2: "#ef4444", accent: "#f87171",
+    bg: "#120808", text: "#fff0f0", card: "#1f0d0d", border: "#3d1515",
+    navBg: "#100606", inactive: "#7a4848", secondary: "#a06868",
+    inputBg: "#2a1010", inputBorder: "#4a1a1a",
+  },
+  {
+    id: "bleu", name: "Bleu",
+    grad1: "#93c5fd", grad2: "#3b82f6", accent: "#60a5fa",
+    bg: "#060810", text: "#eff6ff", card: "#0d1020", border: "#1a2240",
+    navBg: "#04060e", inactive: "#4a5f8a", secondary: "#6a80aa",
+    inputBg: "#0d1530", inputBorder: "#1a2a50",
+  },
 ];
 
-function applyTheme(themeId) {
-  document.documentElement.setAttribute('data-theme', themeId);
-  const t = THEMES.find(th => th.id === themeId) || THEMES[0];
+function applyTheme(theme) {
   const r = document.documentElement;
-  r.style.setProperty('--grad1', t.light);
-  r.style.setProperty('--grad2', t.accent);
-  r.style.setProperty('--accent', t.accent);
-  r.style.setProperty('--card', t.bg === '#0d1f17' ? '#132a1e' : t.bg);
-  r.style.setProperty('--nav-bg', t.bg);
-  r.style.setProperty('--input-bg', t.bg);
-  r.style.setProperty('--inactive', '#8a8a9a');
-  r.style.setProperty('--secondary', '#8a8a9a');
+  r.style.setProperty('--grad1',        theme.grad1);
+  r.style.setProperty('--grad2',        theme.grad2);
+  r.style.setProperty('--accent',       theme.accent);
+  r.style.setProperty('--bg',           theme.bg);
+  r.style.setProperty('--text',         theme.text);
+  r.style.setProperty('--card',         theme.card);
+  r.style.setProperty('--border',       theme.border);
+  r.style.setProperty('--nav-bg',       theme.navBg);
+  r.style.setProperty('--inactive',     theme.inactive);
+  r.style.setProperty('--secondary',    theme.secondary);
+  r.style.setProperty('--input-bg',     theme.inputBg);
+  r.style.setProperty('--input-border', theme.inputBorder);
   const meta = document.getElementById('theme-meta');
-  if (meta) meta.content = t.bg;
-  localStorage.setItem('planio-theme', themeId);
+  if (meta) meta.content = theme.bg;
+  localStorage.setItem('planio-theme', theme.id);
 }
+
 // ================================================================
 //  CONSTANTES
 // ================================================================
@@ -241,46 +244,6 @@ const SPACE_MODES = [
 ];
 
 const EMOJIS = ["👋","🏠","🦎","🐻","🦁","🐯","🦅","🦋","⭐","🔥","💎","🏄","🎸","🚀","🌈","🍕","🐉","⚡"];
-
-
-const SPACE_ICONS = [
-  { id:"home",      d:"M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10" },
-  { id:"star",      d:"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" },
-  { id:"heart",     d:"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" },
-  { id:"briefcase", d:"M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" },
-  { id:"book",      d:"M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" },
-  { id:"music",     d:"M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" },
-  { id:"film",      d:"M2 2h20v20H2zM7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5" },
-  { id:"map-pin",   d:"M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0zM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
-  { id:"zap",       d:"M13 2L3 14h9l-1 8 10-12h-9l1-8z" },
-  { id:"coffee",    d:"M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3" },
-  { id:"globe",     d:"M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" },
-  { id:"users",     d:"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" },
-  { id:"camera",    d:"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
-  { id:"sun",       d:"M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" },
-  { id:"moon",      d:"M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" },
-  { id:"target",    d:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" },
-  { id:"award",     d:"M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.21 13.89L7 23l5-3 5 3-1.21-9.12" },
-  { id:"flag",      d:"M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" },
-  { id:"rocket",    d:"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" },
-  { id:"gamepad",   d:"M21 6H3a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM11 12H9v2H7v-2H5v-2h2V8h2v2h2zM17 11h.01M15 13h.01" },
-  { id:"palette",   d:"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zM8.5 13a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM11 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM15.5 13a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM14 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" },
-  { id:"layers",    d:"M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" },
-  { id:"compass",   d:"M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" },
-  { id:"gift",      d:"M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" },
-  { id:"tree",      d:"M17 14c.5-2 1-3 1-5a6 6 0 0 0-12 0c0 2 .5 3 1 5M12 22v-6M9 19h6" },
-  { id:"dumbbell",  d:"M6.5 6.5h11M6 8h.5M17.5 8H18M6 10h.5M17.5 10H18M8.5 6.5v7M15.5 6.5v7M3 8h3v4H3zM18 8h3v4h-3z" },
-];
-
-function SpaceIcon({ id, size=20, color="currentColor" }) {
-  const icon = SPACE_ICONS.find(i => i.id === id);
-  if (!icon) return <span style={{fontSize: size*0.8+'px', lineHeight:'1'}}>●</span>;
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={icon.d}/>
-    </svg>
-  );
-}
 
 const BADGE_COLORS = [
   { bg: "#3d1830", text: "#fba8d0" },
@@ -484,8 +447,6 @@ function AuthScreen({ onDone }) {
 // ================================================================
 //  MODAL PARAMÈTRES
 // ================================================================
-//  MODAL PARAMÈTRES
-// ================================================================
 function SettingsModal({ onClose, user, currentThemeId, onThemeChange }) {
   const [oldPwd,  setOldPwd]  = useState("");
   const [newPwd,  setNewPwd]  = useState("");
@@ -517,69 +478,70 @@ function SettingsModal({ onClose, user, currentThemeId, onThemeChange }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="font-bold text-lg" style={{ color:"var(--text)" }}>Paramètres ⚙️</h3>
-          <button onClick={onClose} className="text-2xl leading-none" style={{ color:"var(--text-muted)" }}>×</button>
+          <h3 className="font-bold text-lg">Paramètres ⚙️</h3>
+          <button onClick={onClose} className="text-2xl leading-none" style={{ color: "var(--inactive)" }}>×</button>
         </div>
 
-        {/* Sélecteur de thème */}
-        <p className="text-xs uppercase tracking-wider mb-3" style={{ color:"var(--text-muted)" }}>Thème</p>
+        {/* Thème */}
+        <p className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--secondary)" }}>Thème</p>
         <div className="flex gap-2 mb-6 flex-wrap">
           {THEMES.map(t => (
-            <button key={t.id} onClick={() => onThemeChange(t.id)}
-              className="flex flex-col items-center gap-1 py-2 px-2 transition-all"
+            <button key={t.id} onClick={() => onThemeChange(t)}
+              className="flex-1 min-w-[56px] flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all"
               style={{
-                background: currentThemeId === t.id ? "var(--surface2)" : "transparent",
-                border: `2px solid ${currentThemeId === t.id ? t.light : "var(--border)"}`,
-                borderRadius: "var(--radius-sm)",
-                minWidth: "56px",
+                background: currentThemeId === t.id ? t.card : "transparent",
+                border: `2px solid ${currentThemeId === t.id ? t.accent : t.border}`,
               }}>
-              <div className="w-7 h-7 rounded-full" style={{ background: t.light }} />
-              <span className="text-xs font-medium" style={{ color: currentThemeId === t.id ? "var(--text)" : "var(--text-muted)" }}>{t.name}</span>
+              <div className="w-8 h-8 rounded-full" style={{ background: `linear-gradient(135deg, ${t.grad1}, ${t.grad2})` }} />
+              <span className="text-xs font-medium" style={{ color: currentThemeId === t.id ? t.text : "var(--inactive)" }}>{t.name}</span>
             </button>
           ))}
         </div>
 
         {/* Changer mot de passe */}
-        <p className="text-xs uppercase tracking-wider mb-3" style={{ color:"var(--text-muted)" }}>Mot de passe</p>
+        <p className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--secondary)" }}>Changer le mot de passe</p>
         <input type="password" placeholder="Mot de passe actuel" value={oldPwd} onChange={e => setOldPwd(e.target.value)}
           className="w-full border rounded-xl p-3 text-sm mb-3" autoComplete="current-password" />
         <input type="password" placeholder="Nouveau mot de passe" value={newPwd} onChange={e => setNewPwd(e.target.value)}
           className="w-full border rounded-xl p-3 text-sm mb-3" autoComplete="new-password" />
         <input type="password" placeholder="Confirmer le nouveau" value={confPwd} onChange={e => setConfPwd(e.target.value)}
           className="w-full border rounded-xl p-3 text-sm mb-2" autoComplete="new-password" />
-        {pwdErr && <p className="text-red-400 text-xs mb-2 p-2 rounded-lg" style={{ background:"rgba(239,68,68,0.1)" }}>{pwdErr}</p>}
-        {pwdOk  && <p className="text-green-400 text-xs mb-2 p-2 rounded-lg" style={{ background:"rgba(74,222,128,0.1)" }}>Mot de passe modifié ✓</p>}
+        {pwdErr && <p className="text-red-400 text-xs mb-2 p-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)" }}>{pwdErr}</p>}
+        {pwdOk  && <p className="text-green-400 text-xs mb-2 p-2 rounded-lg" style={{ background: "rgba(74,222,128,0.1)" }}>Mot de passe modifié ✓</p>}
         <button onClick={changePwd} disabled={busy || !oldPwd || !newPwd || !confPwd}
-          className="w-full text-white font-semibold py-3 mb-5"
-          style={{ background:"var(--accent)", borderRadius:"var(--radius-sm)", opacity: busy || !oldPwd || !newPwd || !confPwd ? 0.5 : 1 }}>
+          className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-5"
+          style={{ opacity: busy || !oldPwd || !newPwd || !confPwd ? 0.5 : 1 }}>
           {busy ? "…" : "Modifier le mot de passe"}
         </button>
 
+        {/* Déconnexion */}
         <button onClick={() => auth.signOut()}
-          className="w-full py-3 text-sm font-semibold"
-          style={{ background:"rgba(239,68,68,0.1)", color:"#f87171", borderRadius:"var(--radius-sm)", border:"1px solid rgba(239,68,68,0.2)" }}>
+          className="w-full py-3 rounded-xl text-sm font-semibold"
+          style={{ background: "#2d1520", color: "#f87171" }}>
           Se déconnecter
         </button>
       </div>
     </div>
   );
 }
+
 // ================================================================
 //  ÉCRAN D'ACCUEIL — liste des espaces
 // ================================================================
 function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChange }) {
-  const [spaces, setSpaces]             = useState([]);
-  const [showCreate, setShowCreate]     = useState(false);
-  const [showJoin, setShowJoin]         = useState(false);
+  const [spaces, setSpaces]         = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin]     = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [newName, setNewName]           = useState("");
-  const [spaceMode, setSpaceMode]       = useState(null);
-  const [createStep, setCreateStep]     = useState("mode");
-  const [spaceIcon, setSpaceIcon]       = useState("home");
-  const [code, setCode]                 = useState("");
-  const [err, setErr]                   = useState("");
-  const [busy, setBusy]                 = useState(false);
+  const [newName, setNewName]         = useState("");
+  const [spaceMode, setSpaceMode]     = useState(null);
+  const [createStep, setCreateStep]   = useState("mode");
+  const [selectedMods, setSelectedMods] = useState(["activites","idees","films","musique","jeux"]);
+  const [code, setCode]               = useState("");
+  const [err, setErr]                 = useState("");
+  const [busy, setBusy]               = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -589,28 +551,32 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
     return unsub;
   }, [user]);
 
-  const myMember = { uid: user.uid, name: userData?.name || user.displayName || "Moi", emoji: userData?.emoji || "🦦" };
-
-  const resetCreate = () => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); setSpaceIcon("home"); };
+  const myMember = { uid: user.uid, name: userData?.name || user.displayName || "Moi", emoji: userData?.emoji || "👋" };
 
   const createSpace = async () => {
     if (!newName.trim()) return;
     setBusy(true);
     const inviteCode = genCode();
     const mode = spaceMode || "social";
-    const ref = await db.collection("spaces").add({
+    const modules = mode === "social" ? selectedMods : null;
+    const spaceData = {
       name:       newName.trim(),
-      icon:       spaceIcon,
       inviteCode,
       mode,
       createdBy:  user.uid,
       memberIds:  [user.uid],
       members:    [myMember],
       createdAt:  firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    setBusy(false); resetCreate();
-    onEnterSpace({ id: ref.id, name: newName.trim(), icon: spaceIcon, inviteCode, mode, members: [myMember], memberIds: [user.uid] });
+    };
+    if (modules) spaceData.modules = modules;
+    const ref = await db.collection("spaces").add(spaceData);
+    setBusy(false); setShowCreate(false); setNewName(""); setSpaceMode(null); setCreateStep("mode"); setSelectedMods(["activites","idees","films","musique","jeux"]);
+    onEnterSpace({ id: ref.id, name: newName.trim(), inviteCode, mode, modules, members: [myMember], memberIds: [user.uid] });
   };
+
+  const toggleMod = (id) => setSelectedMods(prev =>
+    prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+  );
 
   const joinSpace = async () => {
     const trimmed = code.trim().toUpperCase();
@@ -635,83 +601,73 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
       {/* Header */}
-      <div className="px-5 pt-5 pb-4 mb-5 flex items-start justify-between"
-        style={{ background:"var(--accent)", borderRadius:"var(--radius)" }}>
+      <div className="gradient-bg rounded-2xl px-5 pt-5 pb-4 mb-5 flex items-start justify-between">
         <div>
-          <h1 className="text-white font-bold text-2xl" style={{ letterSpacing:"-0.5px" }}>Planio</h1>
-          <p className="text-sm mt-0.5" style={{ color:"rgba(255,255,255,0.75)" }}>
+          <h1 className="text-white font-bold text-2xl">Planio</h1>
+          <p className="text-white/70 text-sm mt-0.5">
             {userData?.emoji || "👋"} {userData?.name || user.displayName || "Bienvenue"}
           </p>
         </div>
-        <button onClick={() => setShowSettings(true)} className="text-lg px-3 py-1.5"
-          style={{ background:"rgba(0,0,0,0.2)", color:"rgba(255,255,255,0.85)", borderRadius:"var(--radius-sm)" }}>
+        <button onClick={() => setShowSettings(true)} className="text-xl text-white/70 px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>
           ⚙️
         </button>
       </div>
 
       {/* Actions */}
       <div className="flex gap-3 mb-5">
-        <button onClick={() => setShowCreate(true)} className="flex-1 text-white font-semibold py-3 text-sm"
-          style={{ background:"var(--accent)", borderRadius:"var(--radius-sm)" }}>
+        <button onClick={() => setShowCreate(true)} className="flex-1 gradient-bg text-white font-semibold py-3 rounded-xl text-sm">
           + Créer un espace
         </button>
-        <button onClick={() => { setShowJoin(true); setErr(""); }} className="flex-1 font-semibold py-3 text-sm"
-          style={{ background:"var(--surface)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:"var(--radius-sm)" }}>
+        <button onClick={() => { setShowJoin(true); setErr(""); }} className="flex-1 text-white font-semibold py-3 rounded-xl text-sm" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
           Rejoindre
         </button>
       </div>
 
       {/* Liste des espaces */}
       {spaces.length === 0 ? (
-        <EmptyState emoji="🌍" text="Crée ou rejoins un espace pour commencer" />
+        <EmptyState emoji="🚀" text="Crée ou rejoins un espace pour commencer" />
       ) : (
         <div className="flex flex-col gap-3">
           {spaces.map(s => (
             <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 flex items-center justify-center"
-                  style={{ background:"rgba(var(--accent-light),0.1)", borderRadius:"var(--radius-sm)" }}>
-                  {s.icon
-                    ? <SpaceIcon id={s.icon} size={22} color="var(--accent-light)" />
-                    : <span className="text-xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji || "👥"}</span>
-                  }
-                </div>
+                <span className="text-2xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji || "👥"}</span>
                 <div>
-                  <p className="font-semibold" style={{ color:"var(--text)" }}>{s.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color:"var(--text-muted)" }}>
+                  <p className="font-semibold">{s.name}</p>
+                  <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
                     {(s.members || []).map(m => m.emoji).join(" ")} · {(s.memberIds || []).length} membre{(s.memberIds || []).length > 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
-              <span className="text-lg" style={{ color:"var(--text-muted)" }}>›</span>
+              <span className="text-xl" style={{ color: "var(--inactive)" }}>›</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Modal créer */}
+      {/* Modal créer — 3 étapes (mode → nom → modules pour social) */}
       {showCreate && (
-        <div className="modal-overlay" onClick={resetCreate}>
+        <div className="modal-overlay" onClick={() => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); setSelectedMods(["activites","idees","films","musique","jeux"]); }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-lg" style={{ color:"var(--text)" }}>
-                {createStep === "mode" ? "Type d'espace" : createStep === "name" ? "Nom & icône" : "Icône"}
+              <h3 className="font-bold text-lg">
+                {createStep === "mode" ? "Quel type d'espace ?" : createStep === "name" ? "Nouvel espace" : "Choisir les modules"}
               </h3>
-              <button onClick={resetCreate} className="text-2xl" style={{ color:"var(--text-muted)" }}>×</button>
+              <button onClick={() => { setShowCreate(false); setCreateStep("mode"); setSpaceMode(null); setNewName(""); setSelectedMods(["activites","idees","films","musique","jeux"]); }} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
             </div>
 
             {createStep === "mode" && (
               <>
-                <p className="text-sm mb-4" style={{ color:"var(--text-muted)" }}>Choisis un mode pour adapter l'interface.</p>
-                <div className="flex flex-col gap-3">
+                <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>Choisis un mode pour adapter l'interface.</p>
+                <div className="flex flex-col gap-3 mb-2">
                   {SPACE_MODES.map(m => (
                     <button key={m.id} onClick={() => { setSpaceMode(m.id); setCreateStep("name"); }}
-                      className="w-full text-left p-4 flex items-center gap-4 transition-all"
-                      style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:"var(--radius)" }}>
-                      <span className="text-3xl">{m.emoji}</span>
-                      <div>
-                        <p className="font-bold text-base" style={{ color:"var(--text)" }}>{m.name}</p>
-                        <p className="text-sm" style={{ color:"var(--text-muted)" }}>{m.desc}</p>
+                      className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all"
+                      style={{ background: "var(--input-bg)", border: "2px solid var(--border)" }}>
+                      <span className="text-4xl">{m.emoji}</span>
+                              <div>
+                        <p className="font-bold text-base" style={{ color: "var(--text)" }}>{m.name}</p>
+                        <p className="text-sm" style={{ color: "var(--secondary)" }}>{m.desc}</p>
                       </div>
                     </button>
                   ))}
@@ -721,35 +677,59 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
 
             {createStep === "name" && (
               <>
-                <div className="flex items-center gap-2 mb-4 p-3" style={{ background:"var(--surface2)", borderRadius:"var(--radius-sm)", border:"1px solid var(--border)" }}>
-                  <span className="text-xl">{SPACE_MODES.find(m => m.id === spaceMode)?.emoji}</span>
-                  <span className="font-medium text-sm" style={{ color:"var(--text-muted)" }}>{SPACE_MODES.find(m => m.id === spaceMode)?.name}</span>
-                  <button onClick={() => setCreateStep("mode")} className="ml-auto text-xs px-2 py-1" style={{ color:"var(--accent-light)", background:"transparent", borderRadius:"var(--radius-sm)" }}>Changer</button>
+                <div className="flex items-center gap-2 mb-4 p-3 rounded-xl" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+                  <span className="text-2xl">{SPACE_MODES.find(m => m.id === spaceMode)?.emoji}</span>
+                  <span className="font-medium" style={{ color: "var(--secondary)" }}>{SPACE_MODES.find(m => m.id === spaceMode)?.name}</span>
+                  <button onClick={() => setCreateStep("mode")} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{ color: "var(--accent)", background: "transparent" }}>Changer</button>
                 </div>
-                <label className="block text-xs uppercase tracking-wider mb-1" style={{ color:"var(--text-muted)" }}>Nom de l'espace</label>
-                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Vacances, Coloc…"
+                <label className="block text-xs uppercase tracking-wider mb-1" style={{ color: "var(--secondary)" }}>Nom de l'espace</label>
+                <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Ex: Vacances, Coloc, Planio…"
                   className="w-full border rounded-xl p-3 text-sm mb-4" autoFocus />
-                <label className="block text-xs uppercase tracking-wider mb-2" style={{ color:"var(--text-muted)" }}>Icône</label>
-                <div className="grid mb-4" style={{ gridTemplateColumns:"repeat(8,1fr)", gap:"8px" }}>
-                  {SPACE_ICONS.map(ic => (
-                    <button key={ic.id} type="button" onClick={() => setSpaceIcon(ic.id)}
-                      className="flex items-center justify-center transition-all"
-                      style={{
-                        width:"36px", height:"36px",
-                        background: spaceIcon === ic.id ? "var(--accent)" : "var(--surface2)",
-                        borderRadius:"var(--radius-sm)",
-                        border: spaceIcon === ic.id ? "2px solid var(--accent-light)" : "1px solid var(--border)",
-                        transform: spaceIcon === ic.id ? "scale(1.1)" : "scale(1)",
-                      }}>
-                      <SpaceIcon id={ic.id} size={16} color={spaceIcon === ic.id ? "white" : "var(--text-muted)"} />
-                    </button>
-                  ))}
-                </div>
-                <button onClick={createSpace} disabled={busy || !newName.trim()}
-                  className="w-full text-white font-bold py-3"
-                  style={{ background:"var(--accent)", borderRadius:"var(--radius-sm)", opacity: busy || !newName.trim() ? 0.6 : 1 }}>
-                  {busy ? "…" : "Créer l'espace"}
+                <button
+                  onClick={() => spaceMode === "social" ? setCreateStep("modules") : createSpace()}
+                  disabled={busy || !newName.trim()}
+                  className="gradient-bg w-full text-white font-bold py-3 rounded-xl"
+                  style={{ opacity: busy || !newName.trim() ? 0.6 : 1 }}>
+                  {spaceMode === "social" ? "Suivant →" : busy ? "…" : "Créer l'espace"}
                 </button>
+              </>
+            )}
+
+            {createStep === "modules" && (
+              <>
+                <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>Sélectionne les modules à activer. Tu pourras les modifier à tout moment.</p>
+                <div className="flex flex-col gap-2 mb-5">
+                  {SOCIAL_MODULES.map(m => {
+                    const active = selectedMods.includes(m.id);
+                    return (
+                      <button key={m.id} onClick={() => toggleMod(m.id)}
+                        className="w-full text-left p-3.5 rounded-2xl flex items-center gap-3 transition-all"
+                        style={{
+                          background: active ? "rgba(var(--grad1-rgb, 249,168,212), 0.12)" : "var(--input-bg)",
+                          border: `2px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                        }}>
+                        <span className="text-2xl">{m.emoji}</span>
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>{m.label}</p>
+                          <p className="text-xs" style={{ color: "var(--secondary)" }}>{m.desc}</p>
+                        </div>
+                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{ background: active ? "var(--accent)" : "var(--border)", color: active ? "white" : "var(--inactive)" }}>
+                          {active ? "✓" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setCreateStep("name")} className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)", border: "1px solid var(--border)" }}>← Retour</button>
+                  <button onClick={createSpace} disabled={busy || selectedMods.length === 0}
+                    className="flex-1 gradient-bg text-white font-bold py-3 rounded-xl"
+                    style={{ opacity: busy || selectedMods.length === 0 ? 0.6 : 1 }}>
+                    {busy ? "…" : `Créer (${selectedMods.length} modules)`}
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -761,29 +741,34 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
         <div className="modal-overlay" onClick={() => setShowJoin(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-lg" style={{ color:"var(--text)" }}>Rejoindre un espace</h3>
-              <button onClick={() => setShowJoin(false)} className="text-2xl" style={{ color:"var(--text-muted)" }}>×</button>
+              <h3 className="font-bold text-lg">Rejoindre un espace</h3>
+              <button onClick={() => setShowJoin(false)} className="text-2xl" style={{ color: "var(--inactive)" }}>×</button>
             </div>
-            <label className="block text-xs uppercase tracking-wider mb-1" style={{ color:"var(--text-muted)" }}>Code d'invitation</label>
+            <label className="block text-xs uppercase tracking-wider mb-1" style={{ color: "var(--secondary)" }}>Code d'invitation</label>
             <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="EX: XK7F2P"
               className="w-full border rounded-xl p-4 text-2xl font-bold tracking-widest text-center mb-1" maxLength={6} autoFocus />
             {err && <p className="text-red-400 text-xs mb-3">{err}</p>}
             <div className="h-3" />
-            <button onClick={joinSpace} disabled={busy || code.trim().length < 6}
-              className="w-full text-white font-bold py-3"
-              style={{ background:"var(--accent)", borderRadius:"var(--radius-sm)", opacity: busy || code.trim().length < 6 ? 0.6 : 1 }}>
+            <button onClick={joinSpace} disabled={busy || code.trim().length < 6} className="gradient-bg w-full text-white font-bold py-3 rounded-xl" style={{ opacity: busy || code.trim().length < 6 ? 0.6 : 1 }}>
               {busy ? "…" : "Rejoindre"}
             </button>
           </div>
         </div>
       )}
 
+      {/* Modal paramètres */}
       {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} user={user} currentThemeId={currentThemeId} onThemeChange={onThemeChange} />
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          user={user}
+          currentThemeId={currentThemeId}
+          onThemeChange={(t) => { onThemeChange(t); }}
+        />
       )}
     </div>
   );
 }
+
 // ================================================================
 //  ONGLETS CONTENU
 // ================================================================
@@ -815,42 +800,21 @@ function ActivitesTab({ spaceId, user, members }) {
     try { await db.collection(path).doc(id).delete(); }
     catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
   };
-  const compressImage = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX = 900;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.72));
-      };
-      img.onerror = reject;
-      img.src = ev.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
   const uploadPhotos = async (itemId, files) => {
     if (!files || files.length === 0) return;
     setUploading(u => ({ ...u, [itemId]: true }));
     try {
       const newPhotos = [];
       for (const file of Array.from(files)) {
-        const dataUrl = await compressImage(file);
-        newPhotos.push({ dataUrl, name: file.name, uploadedAt: Date.now() });
+        const ref = storage.ref(`${path}/${itemId}/photos/${Date.now()}_${file.name}`);
+        await ref.put(file);
+        const url = await ref.getDownloadURL();
+        newPhotos.push({ url, name: file.name, uploadedAt: Date.now() });
       }
       const item = items.find(i => i.id === itemId);
       const existing = item?.photos || [];
       await db.collection(path).doc(itemId).update({ photos: [...existing, ...newPhotos] });
-    } catch(e) {
-      console.error('Erreur photo:', e);
-      alert('Erreur : ' + (e.message || e));
-    }
+    } catch(e) { console.error('Erreur upload photo:', e); alert('Erreur upload. Réessaie.'); }
     finally { setUploading(u => ({ ...u, [itemId]: false })); }
   };
 
@@ -908,8 +872,8 @@ function ActivitesTab({ spaceId, user, members }) {
                     {photos.length > 0 && (
                       <div className="flex gap-2" style={{ marginBottom: "8px" }}>
                         {visible.map((p, i) => (
-                          <div key={i} onClick={() => setLightbox(p.dataUrl || p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
-                            <img src={p.dataUrl || p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <div key={i} onClick={() => setLightbox(p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
+                            <img src={p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             {i === 2 && extra > 0 && (
                               <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1fae5", fontSize: "0.85rem", fontWeight: 700 }}>+{extra}</div>
                             )}
@@ -3933,35 +3897,23 @@ function App() {
   const [user,         setUser]         = useState(undefined);
   const [userData,     setUserData]     = useState(null);
   const [currentSpace, setCurrentSpace] = useState(null);
-  const [themeId,      setThemeId]      = useState("foret");
+  const [themeId,      setThemeId]      = useState("mauve");
 
   // Init thème depuis localStorage
   useEffect(() => {
     const saved = localStorage.getItem('planio-theme');
-    const valid = THEMES.find(t => t.id === saved);
-    const id = valid ? saved : "foret";
-    setThemeId(id);
-    applyTheme(id);
+    const theme = THEMES.find(t => t.id === saved) || THEMES[0];
+    setThemeId(theme.id);
+    applyTheme(theme);
   }, []);
 
   useEffect(() => {
     let unsubUser = null;
-    const unsubAuth = auth.onAuthStateChanged(async (u) => {
+    const unsubAuth = auth.onAuthStateChanged((u) => {
       setUser(u);
       if (unsubUser) { unsubUser(); unsubUser = null; }
       if (u) {
         askAndSavePush(u.uid);
-        // Charger le thème depuis Firestore
-        try {
-          const doc = await db.collection("users").doc(u.uid).get();
-          if (doc.exists) {
-            const savedTheme = doc.data()?.settings?.theme;
-            if (savedTheme && THEMES.find(t => t.id === savedTheme)) {
-              setThemeId(savedTheme);
-              applyTheme(savedTheme);
-            }
-          }
-        } catch(e) { console.warn("Theme load:", e); }
         unsubUser = db.collection("users").doc(u.uid).onSnapshot(doc => {
           if (doc.exists) setUserData(doc.data());
         });
@@ -3972,14 +3924,9 @@ function App() {
     return () => { unsubAuth(); if (unsubUser) unsubUser(); };
   }, []);
 
-  const handleThemeChange = async (tid) => {
-    setThemeId(tid);
-    applyTheme(tid);
-    if (user) {
-      try {
-        await db.collection("users").doc(user.uid).set({ settings: { theme: tid } }, { merge: true });
-      } catch(e) { console.warn("Theme save:", e); }
-    }
+  const handleThemeChange = (theme) => {
+    setThemeId(theme.id);
+    applyTheme(theme);
   };
 
   if (user === undefined) return <Spinner />;
