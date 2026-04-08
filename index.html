@@ -770,7 +770,8 @@ function ActivitesTab({ spaceId, user, members }) {
   const [modal, setModal]       = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [uploading, setUploading] = useState({});
-  const [lightbox, setLightbox]   = useState(null);
+  const [lightbox, setLightbox]   = useState(null); // { url, itemId, idx }
+  const { showConfirm, ConfirmModal } = useConfirm();
   const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
   const items = useCollection(path);
 
@@ -791,18 +792,19 @@ function ActivitesTab({ spaceId, user, members }) {
     try { await db.collection(path).doc(id).delete(); }
     catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
   };
+  // Compression aggressive → base64 ~20Ko, stocké directement dans Firestore
   const compressImage = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = ev => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 900;
+        const MAX = 800;
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', 0.72);
+        resolve(canvas.toDataURL('image/jpeg', 0.55));
       };
       img.onerror = reject;
       img.src = ev.target.result;
@@ -817,21 +819,25 @@ function ActivitesTab({ spaceId, user, members }) {
     try {
       const newPhotos = [];
       for (const file of Array.from(files)) {
-        const blob = await compressImage(file);
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const ref = storage.ref(`${path}/${itemId}/${Date.now()}_${safeName}`);
-        await ref.put(blob, { contentType: 'image/jpeg' });
-        const url = await ref.getDownloadURL();
-        newPhotos.push({ url, name: file.name, uploadedAt: Date.now() });
+        const dataUrl = await compressImage(file);
+        newPhotos.push({ dataUrl, name: file.name, uploadedAt: Date.now() });
       }
       const item = items.find(i => i.id === itemId);
       const existing = item?.photos || [];
       await db.collection(path).doc(itemId).update({ photos: [...existing, ...newPhotos] });
     } catch(e) {
       console.error('Erreur photo:', e);
-      alert('Erreur : ' + (e.message || e));
+      alert('Erreur upload : ' + (e.message || e));
     }
     finally { setUploading(u => ({ ...u, [itemId]: false })); }
+  };
+
+  const deletePhoto = async (itemId, photoIdx) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    const photos = (item.photos || []).filter((_, i) => i !== photoIdx);
+    try { await db.collection(path).doc(itemId).update({ photos }); }
+    catch(e) { alert('Erreur suppression photo : ' + (e.message || e)); }
   };
 
   return (
@@ -886,13 +892,16 @@ function ActivitesTab({ spaceId, user, members }) {
                 return (
                   <div style={{ marginTop: "10px" }}>
                     {photos.length > 0 && (
-                      <div className="flex gap-2" style={{ marginBottom: "8px" }}>
+                      <div className="flex gap-2 flex-wrap" style={{ marginBottom: "8px" }}>
                         {visible.map((p, i) => (
-                          <div key={i} onClick={() => setLightbox(p.dataUrl || p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
-                            <img src={p.dataUrl || p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            {i === 2 && extra > 0 && (
-                              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1fae5", fontSize: "0.85rem", fontWeight: 700 }}>+{extra}</div>
-                            )}
+                          <div key={i} style={{ position: "relative", flexShrink: 0 }}>
+                            <div onClick={() => setLightbox({ url: p.dataUrl || p.url, itemId: item.id, idx: i })} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative" }}>
+                              <img src={p.dataUrl || p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              {i === 2 && extra > 0 && (
+                                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1fae5", fontSize: "0.85rem", fontWeight: 700 }}>+{extra}</div>
+                              )}
+                            </div>
+                            <button onClick={async e => { e.stopPropagation(); if (await showConfirm('Supprimer cette photo ?')) await deletePhoto(item.id, i); }} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#2d1520", color: "#f87171", border: "1px solid #f87171", cursor: "pointer", fontSize: "0.55rem", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, padding: 0 }}>✕</button>
                           </div>
                         ))}
                       </div>
@@ -938,10 +947,12 @@ function ActivitesTab({ spaceId, user, members }) {
       )}
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <img src={lightbox} alt="photo" style={{ maxWidth: "95vw", maxHeight: "90vh", borderRadius: 12, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.7)" }} />
+          <img src={lightbox.url} alt="photo" style={{ maxWidth: "95vw", maxHeight: "85vh", borderRadius: 12, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.7)" }} />
           <button onClick={() => setLightbox(null)} style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.4rem", borderRadius: "50%", width: 40, height: 40, cursor: "pointer" }}>✕</button>
+          <button onClick={async e => { e.stopPropagation(); if (await showConfirm('Supprimer cette photo ?')) { await deletePhoto(lightbox.itemId, lightbox.idx); setLightbox(null); } }} style={{ position: "absolute", bottom: 30, left: "50%", transform: "translateX(-50%)", background: "#2d1520", border: "1px solid #f87171", color: "#f87171", padding: "8px 22px", borderRadius: 20, cursor: "pointer", fontSize: "0.9rem", fontWeight: 600 }}>🗑 Supprimer</button>
         </div>
       )}
+      {ConfirmModal}
     </div>
   );
 }
