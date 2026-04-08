@@ -802,7 +802,7 @@ function ActivitesTab({ spaceId, user, members }) {
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.72));
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', 0.72);
       };
       img.onerror = reject;
       img.src = ev.target.result;
@@ -817,8 +817,12 @@ function ActivitesTab({ spaceId, user, members }) {
     try {
       const newPhotos = [];
       for (const file of Array.from(files)) {
-        const dataUrl = await compressImage(file);
-        newPhotos.push({ dataUrl, name: file.name, uploadedAt: Date.now() });
+        const blob = await compressImage(file);
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const ref = storage.ref(`${path}/${itemId}/${Date.now()}_${safeName}`);
+        await ref.put(blob, { contentType: 'image/jpeg' });
+        const url = await ref.getDownloadURL();
+        newPhotos.push({ url, name: file.name, uploadedAt: Date.now() });
       }
       const item = items.find(i => i.id === itemId);
       const existing = item?.photos || [];
