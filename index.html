@@ -800,21 +800,42 @@ function ActivitesTab({ spaceId, user, members }) {
     try { await db.collection(path).doc(id).delete(); }
     catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
   };
+  const compressImage = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 900;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const uploadPhotos = async (itemId, files) => {
     if (!files || files.length === 0) return;
     setUploading(u => ({ ...u, [itemId]: true }));
     try {
       const newPhotos = [];
       for (const file of Array.from(files)) {
-        const ref = storage.ref(`${path}/${itemId}/photos/${Date.now()}_${file.name}`);
-        await ref.put(file);
-        const url = await ref.getDownloadURL();
-        newPhotos.push({ url, name: file.name, uploadedAt: Date.now() });
+        const dataUrl = await compressImage(file);
+        newPhotos.push({ dataUrl, name: file.name, uploadedAt: Date.now() });
       }
       const item = items.find(i => i.id === itemId);
       const existing = item?.photos || [];
       await db.collection(path).doc(itemId).update({ photos: [...existing, ...newPhotos] });
-    } catch(e) { console.error('Erreur upload photo:', e); alert('Erreur upload. Réessaie.'); }
+    } catch(e) {
+      console.error('Erreur photo:', e);
+      alert('Erreur : ' + (e.message || e));
+    }
     finally { setUploading(u => ({ ...u, [itemId]: false })); }
   };
 
@@ -872,8 +893,8 @@ function ActivitesTab({ spaceId, user, members }) {
                     {photos.length > 0 && (
                       <div className="flex gap-2" style={{ marginBottom: "8px" }}>
                         {visible.map((p, i) => (
-                          <div key={i} onClick={() => setLightbox(p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
-                            <img src={p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <div key={i} onClick={() => setLightbox(p.dataUrl || p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
+                            <img src={p.dataUrl || p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             {i === 2 && extra > 0 && (
                               <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1fae5", fontSize: "0.85rem", fontWeight: 700 }}>+{extra}</div>
                             )}
