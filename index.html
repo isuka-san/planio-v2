@@ -9,14 +9,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Planio" />
 
-  <!-- Preconnect hints -->
-  <link rel="preconnect" href="https://unpkg.com" crossorigin>
-  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-  <link rel="dns-prefetch" href="https://unpkg.com">
-  <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
-  <link rel="dns-prefetch" href="https://www.gstatic.com">
-
   <!-- React + Babel -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -31,27 +23,26 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <style>
-    @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
     :root {
-      --grad1: #f9a8d4; --grad2: #c084fc;
-      --accent: #f472b6;
-      --bg: #0d0d14; --text: #f0eefa;
-      --card: #1a1527; --border: #2a2242;
-      --nav-bg: #12101e;
-      --inactive: #6b5f8a; --secondary: #9791b0;
-      --input-bg: #221c35; --input-border: #3a2f55;
+      --grad1: #3dba7e; --grad2: #2d8a5e;
+      --accent: #2d8a5e;
+      --bg: #0d1f17; --text: #e8f5ee;
+      --card: #132a1e; --border: #1e4530;
+      --nav-bg: #0d1f17;
+      --inactive: #4a7a5e; --secondary: #7ab896;
+      --input-bg: #1a3526; --input-border: #2d5440;
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; }
-    .gradient-bg { background: linear-gradient(135deg, var(--grad1) 0%, var(--grad2) 100%); }
-    .card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); }
+    .gradient-bg { background: var(--accent); }
+    .card { background: var(--card); border-radius: 14px; border: 1px solid var(--border); }
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav-bg); border-top: 1px solid var(--border); padding: 8px 0 env(safe-area-inset-bottom); z-index: 100; }
     .tab-btn { transition: all 0.2s; color: var(--inactive); }
     .tab-btn.active { color: var(--accent); }
     .filter-btn { background: var(--input-bg); color: var(--secondary); border: 1px solid var(--border); transition: all 0.2s; }
-    .filter-btn.active { background: linear-gradient(135deg, var(--grad1) 0%, var(--grad2) 100%); color: white; border-color: transparent; }
+    .filter-btn.active { background: var(--accent); color: white; border-color: transparent; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; display: flex; align-items: flex-end; }
-    .modal-content { background: var(--card); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .modal-content { background: var(--card); border-radius: 20px 20px 0 0; border-top: 1px solid var(--border); width: 100%; max-height: 90vh; overflow-y: auto; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
     input, select, textarea { outline: none; background: var(--input-bg); border-color: var(--input-border) !important; color: var(--text); font-size: 1rem; }
     input::placeholder, textarea::placeholder { color: var(--inactive); }
     select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem !important; }
@@ -60,7 +51,7 @@
   </style>
 </head>
 <body>
-<div id="root"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0d14;"><div style="background:linear-gradient(135deg,#f9a8d4,#c084fc);border-radius:16px;padding:32px 40px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.4);"><p style="color:white;font-weight:700;font-size:1.5rem;margin:0;letter-spacing:0.05em;">Planio</p><p style="color:rgba(255,255,255,0.7);font-size:0.875rem;margin:10px 0 0;">Chargement…</p><div style="margin-top:16px;display:flex;gap:6px;justify-content:center;"><div style="width:8px;height:8px;border-radius:50%;background:white;opacity:0.9;animation:pulse 1.2s ease-in-out infinite;"></div><div style="width:8px;height:8px;border-radius:50%;background:white;opacity:0.9;animation:pulse 1.2s ease-in-out 0.2s infinite;"></div><div style="width:8px;height:8px;border-radius:50%;background:white;opacity:0.9;animation:pulse 1.2s ease-in-out 0.4s infinite;"></div></div></div></div></div>
+<div id="root"></div>
 
 <script type="text/babel" data-presets="env,react">
 const { useState, useEffect } = React;
@@ -76,7 +67,7 @@ const useConfirm = () => {
   const handleYes = () => { state.resolve(true);  setState({ open: false, message: '', resolve: null }); };
   const handleNo  = () => { state.resolve(false); setState({ open: false, message: '', resolve: null }); };
   const ConfirmModal = state.open ? (
-    <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 400, background: 'rgba(0,0,0,0.65)' }}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.65)' }}>
       <div className="rounded-2xl p-6 mx-4 max-w-sm w-full shadow-xl" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
         <p className="text-base mb-5 text-center" style={{ color: 'var(--text)' }}>{state.message}</p>
         <div className="flex gap-3">
@@ -106,7 +97,7 @@ const auth = firebase.auth();
 const db      = firebase.firestore();
 const storage = firebase.storage();
 
-// ── FCM Push Notifications ────────────────────────────────────────────────────────
+// ── FCM Push Notifications ──────────────────────────────────────
 // ⚠️  Remplis ta VAPID key : Firebase Console → Project Settings
 //     → Cloud Messaging → Web Push certificates → Generate/Copy key pair
 const VAPID_KEY = "BEgkKzE2hnal-LmeyQMmAgiIZK0vh-hJuuCOZyrrwCaO2DBEgjwD9xUThnGu1Lt_MkPF0Fjdnd4GftFLsmlYZA8";
@@ -136,7 +127,7 @@ async function sendPingTo(spaceId, fromUser, fromUserData, target) {
     targetName: target.name,
     fromId:    fromUser.uid,
     fromName:  fromUserData?.name  || fromUser.displayName || "Quelqu'un",
-    fromEmoji: fromUserData?.emoji || "👋",
+    fromEmoji: fromUserData?.emoji || "🦖",
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 }
@@ -146,39 +137,39 @@ async function sendPingTo(spaceId, fromUser, fromUserData, target) {
 // ================================================================
 const THEMES = [
   {
-    id: "mauve", name: "Mauve",
-    grad1: "#f9a8d4", grad2: "#c084fc", accent: "#f472b6",
-    bg: "#0d0d14", text: "#f0eefa", card: "#1a1527", border: "#2a2242",
-    navBg: "#12101e", inactive: "#6b5f8a", secondary: "#9791b0",
-    inputBg: "#221c35", inputBorder: "#3a2f55",
+    id: "foret", name: "Forêt",
+    grad1: "#3dba7e", grad2: "#2d8a5e", accent: "#2d8a5e",
+    bg: "#0d1f17", text: "#e8f5ee", card: "#132a1e", border: "#1e4530",
+    navBg: "#0d1f17", inactive: "#4a7a5e", secondary: "#7ab896",
+    inputBg: "#1a3526", inputBorder: "#2d5440",
   },
   {
-    id: "vert", name: "Vert",
-    grad1: "#86efac", grad2: "#10b981", accent: "#34d399",
-    bg: "#061210", text: "#e8fdf5", card: "#0d1f18", border: "#1a3d2a",
-    navBg: "#060f0d", inactive: "#4a7a65", secondary: "#6aab8e",
-    inputBg: "#0f2a1e", inputBorder: "#1e4d35",
+    id: "minuit", name: "Minuit",
+    grad1: "#7c7cf0", grad2: "#5b5bd6", accent: "#5b5bd6",
+    bg: "#0f0f1a", text: "#eeeeff", card: "#161628", border: "#252550",
+    navBg: "#0f0f1a", inactive: "#4a4a8a", secondary: "#8a8acd",
+    inputBg: "#1e1e38", inputBorder: "#2e2e58",
   },
   {
-    id: "orange", name: "Orange",
-    grad1: "#fdba74", grad2: "#f97316", accent: "#fb923c",
-    bg: "#110a04", text: "#fff1e6", card: "#1f1208", border: "#3d2010",
-    navBg: "#0e0804", inactive: "#7a5a3a", secondary: "#a07858",
-    inputBg: "#2a1a0a", inputBorder: "#4a2f12",
+    id: "ardoise", name: "Ardoise",
+    grad1: "#6aafd4", grad2: "#4a7fa5", accent: "#4a7fa5",
+    bg: "#0f1117", text: "#e8eef4", card: "#1a1d27", border: "#252d40",
+    navBg: "#0f1117", inactive: "#3a5a78", secondary: "#7a9ab8",
+    inputBg: "#1e2230", inputBorder: "#2e3a50",
   },
   {
-    id: "rouge", name: "Rouge",
-    grad1: "#fca5a5", grad2: "#ef4444", accent: "#f87171",
-    bg: "#120808", text: "#fff0f0", card: "#1f0d0d", border: "#3d1515",
-    navBg: "#100606", inactive: "#7a4848", secondary: "#a06868",
-    inputBg: "#2a1010", inputBorder: "#4a1a1a",
+    id: "cerise", name: "Cerise",
+    grad1: "#d44070", grad2: "#a0294a", accent: "#a0294a",
+    bg: "#1a0d14", text: "#f5e8ec", card: "#261220", border: "#401828",
+    navBg: "#1a0d14", inactive: "#7a3a54", secondary: "#c07090",
+    inputBg: "#301828", inputBorder: "#502038",
   },
   {
-    id: "bleu", name: "Bleu",
-    grad1: "#93c5fd", grad2: "#3b82f6", accent: "#60a5fa",
-    bg: "#060810", text: "#eff6ff", card: "#0d1020", border: "#1a2240",
-    navBg: "#04060e", inactive: "#4a5f8a", secondary: "#6a80aa",
-    inputBg: "#0d1530", inputBorder: "#1a2a50",
+    id: "aurore", name: "Aurore",
+    grad1: "#e09b45", grad2: "#c47b2b", accent: "#c47b2b",
+    bg: "#1a1108", text: "#f5efe0", card: "#261a0d", border: "#3d2810",
+    navBg: "#1a1108", inactive: "#7a5a2a", secondary: "#c09060",
+    inputBg: "#302010", inputBorder: "#503020",
   },
 ];
 
@@ -205,7 +196,7 @@ function applyTheme(theme) {
 //  CONSTANTES
 // ================================================================
 const TABS = [
-  { id: "activites", label: "Activités", emoji: "🏄" },
+  { id: "activites", label: "Activités", emoji: "🎯" },
   { id: "idees",     label: "Idées",     emoji: "⭐" },
   { id: "films",     label: "Films",     emoji: "🎬" },
   { id: "musique",   label: "Musique",   emoji: "🎵" },
@@ -214,7 +205,7 @@ const TABS = [
 
 // Tous les modules disponibles pour l'espace social
 const SOCIAL_MODULES = [
-  { id: "activites", label: "Activités", emoji: "🏄", desc: "Sorties, voyages, projets" },
+  { id: "activites", label: "Activités", emoji: "🎯", desc: "Sorties, voyages, projets" },
   { id: "idees",     label: "Idées",     emoji: "⭐", desc: "Suggestions et wishlists" },
   { id: "films",     label: "Films",     emoji: "🎬", desc: "Films & séries avec progression" },
   { id: "musique",   label: "Musique",   emoji: "🎵", desc: "Artistes et albums partagés" },
@@ -240,10 +231,10 @@ const COWORK_TABS = [
 const SPACE_MODES = [
   { id: "social",    name: "Social",    emoji: "👥", desc: "Activités, films, musique, jeux…" },
   { id: "coworking", name: "Coworking", emoji: "💼", desc: "Tâches, projets, notes, liens…"  },
-  { id: "focus",     name: "Focus",     emoji: "🏄", desc: "Habitudes, tâches du jour, suivi perso…" },
+  { id: "focus",     name: "Focus",     emoji: "🎯", desc: "Habitudes, tâches du jour, suivi perso…" },
 ];
 
-const EMOJIS = ["👋","🏠","🦎","🐻","🦁","🐯","🦅","🦋","⭐","🔥","💎","🏄","🎸","🚀","🌈","🍕","🐉","⚡"];
+const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","🎸","🚀","🌈","🍕","🐉","⚡"];
 
 const BADGE_COLORS = [
   { bg: "#3d1830", text: "#fba8d0" },
@@ -353,7 +344,7 @@ function AuthScreen({ onDone }) {
   const [email, setEmail]     = useState("");
   const [pwd, setPwd]         = useState("");
   const [name, setName]       = useState("");
-  const [emoji, setEmoji]     = useState("👋");
+  const [emoji, setEmoji]     = useState("🦖");
   const [err, setErr]         = useState("");
   const [busy, setBusy]       = useState(false);
 
@@ -429,7 +420,7 @@ function AuthScreen({ onDone }) {
               className="w-full border rounded-xl p-3 text-sm mb-4" autoComplete="email" />
 
             <label className="block text-xs text-[#9791b0] uppercase tracking-wider mb-1">Mot de passe</label>
-            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="•••••••••"
+            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="••••••••"
               className="w-full border rounded-xl p-3 text-sm mb-4" autoComplete={mode === "login" ? "current-password" : "new-password"} />
 
             {err && <p className="text-red-400 text-xs mb-3 p-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)" }}>{err}</p>}
@@ -494,7 +485,7 @@ function SettingsModal({ onClose, user, currentThemeId, onThemeChange }) {
                 background: currentThemeId === t.id ? t.card : "transparent",
                 border: `2px solid ${currentThemeId === t.id ? t.accent : t.border}`,
               }}>
-              <div className="w-8 h-8 rounded-full" style={{ background: `linear-gradient(135deg, ${t.grad1}, ${t.grad2})` }} />
+              <div className="w-8 h-8 rounded-full" style={{ background: t.accent, boxShadow: currentThemeId === t.id ? `0 0 12px ${t.accent}88` : 'none' }} />
               <span className="text-xs font-medium" style={{ color: currentThemeId === t.id ? t.text : "var(--inactive)" }}>{t.name}</span>
             </button>
           ))}
@@ -551,7 +542,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
     return unsub;
   }, [user]);
 
-  const myMember = { uid: user.uid, name: userData?.name || user.displayName || "Moi", emoji: userData?.emoji || "👋" };
+  const myMember = { uid: user.uid, name: userData?.name || user.displayName || "Moi", emoji: userData?.emoji || "🦖" };
 
   const createSpace = async () => {
     if (!newName.trim()) return;
@@ -665,7 +656,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
                       className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all"
                       style={{ background: "var(--input-bg)", border: "2px solid var(--border)" }}>
                       <span className="text-4xl">{m.emoji}</span>
-                              <div>
+                      <div>
                         <p className="font-bold text-base" style={{ color: "var(--text)" }}>{m.name}</p>
                         <p className="text-sm" style={{ color: "var(--secondary)" }}>{m.desc}</p>
                       </div>
@@ -800,21 +791,42 @@ function ActivitesTab({ spaceId, user, members }) {
     try { await db.collection(path).doc(id).delete(); }
     catch(e) { console.error('Erreur suppression:', e); alert('Erreur lors de la suppression. Réessaie.'); }
   };
+  const compressImage = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 900;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
   const uploadPhotos = async (itemId, files) => {
     if (!files || files.length === 0) return;
     setUploading(u => ({ ...u, [itemId]: true }));
     try {
       const newPhotos = [];
       for (const file of Array.from(files)) {
-        const ref = storage.ref(`${path}/${itemId}/photos/${Date.now()}_${file.name}`);
-        await ref.put(file);
-        const url = await ref.getDownloadURL();
-        newPhotos.push({ url, name: file.name, uploadedAt: Date.now() });
+        const dataUrl = await compressImage(file);
+        newPhotos.push({ dataUrl, name: file.name, uploadedAt: Date.now() });
       }
       const item = items.find(i => i.id === itemId);
       const existing = item?.photos || [];
       await db.collection(path).doc(itemId).update({ photos: [...existing, ...newPhotos] });
-    } catch(e) { console.error('Erreur upload photo:', e); alert('Erreur upload. Réessaie.'); }
+    } catch(e) {
+      console.error('Erreur photo:', e);
+      alert('Erreur : ' + (e.message || e));
+    }
     finally { setUploading(u => ({ ...u, [itemId]: false })); }
   };
 
@@ -872,8 +884,8 @@ function ActivitesTab({ spaceId, user, members }) {
                     {photos.length > 0 && (
                       <div className="flex gap-2" style={{ marginBottom: "8px" }}>
                         {visible.map((p, i) => (
-                          <div key={i} onClick={() => setLightbox(p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
-                            <img src={p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <div key={i} onClick={() => setLightbox(p.dataUrl || p.url)} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative", flexShrink: 0 }}>
+                            <img src={p.dataUrl || p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             {i === 2 && extra > 0 && (
                               <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1fae5", fontSize: "0.85rem", fontWeight: 700 }}>+{extra}</div>
                             )}
@@ -1335,8 +1347,7 @@ function MusiqueTab({ spaceId, user, members }) {
                 <div className="flex flex-col gap-1">
                   <button onClick={() => toggleLike(m.id, m.liked)} className="w-8 h-8 rounded-full flex items-center justify-center"
                     style={{ background: m.liked ? "#3d1830" : "var(--input-bg)", fontSize: "1rem" }}>
-                    {m.liked ? "❤️" : "🤍"
-}
+                    {m.liked ? "❤️" : "🤍"}
                   </button>
                   <button onClick={() => setEditItem(m)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                     style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
@@ -1992,7 +2003,6 @@ function FocusRepasTab({ spaceId, user }) {
   const editPlanItem = async (id, form) => { if (repasPath) await db.collection(repasPath).doc(id).update({ plat: form.plat, notes: form.notes || "" }); };
   const delPlan = async (id) => { if (repasPath) await db.collection(repasPath).doc(id).delete(); };
 
-
   const addRepas = async (form) => {
     if (!journalPath) return;
     await db.collection(journalPath).add({
@@ -2073,7 +2083,6 @@ function FocusRepasTab({ spaceId, user }) {
       {view === "nutrition" && <div className="text-xs mb-3" style={{ color: "var(--secondary)" }}>{objetifLabel}</div>}
 
       {view === "nutrition" && <>
-
       {/* Carte calories du jour */}
       <div className="card p-4 mb-3">
         <div className="flex items-center justify-between mb-3">
@@ -2252,7 +2261,6 @@ function FocusRepasTab({ spaceId, user }) {
   );
 }
 
-
 function FocusRepasSettings({ objectif, poids, activite, objectifs, onClose, onSave }) {
   const [o, setO] = useState(objectif);
   const [p, setP] = useState(poids);
@@ -2383,21 +2391,16 @@ function FocusPoidsModal({ current, onClose, onSave }) {
   );
 }
 
+// ---- Repas (planning partagé) ----
 const JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 const MOMENTS = ["Matin","Midi","Soir"];
 
 function RepasTab({ spaceId, user, members }) {
-  const [view, setView]         = useState("planning");
-  const [addSlot, setAddSlot]   = useState(null);
+  const [addSlot, setAddSlot]   = useState(null); // { jour, moment }
   const [editItem, setEditItem] = useState(null);
-  const [newCourse, setNewCourse] = useState("");
+  const path = spaceId ? `spaces/${spaceId}/repas` : null;
+  const repas = useCollection(path);
 
-  const path        = spaceId ? `spaces/${spaceId}/repas`    : null;
-  const coursesPath = spaceId ? `spaces/${spaceId}/courses`  : null;
-  const repas   = useCollection(path);
-  const courses = useCollection(coursesPath);
-
-  // Planning CRUD
   const add = async (form) => {
     try {
       await db.collection(path).add({
@@ -2405,153 +2408,72 @@ function RepasTab({ spaceId, user, members }) {
         plat: form.plat, notes: form.notes || "",
         by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); alert('Erreur lors de l\'ajout.'); }
   };
+
   const edit = async (id, form) => {
     try { await db.collection(path).doc(id).update({ plat: form.plat, notes: form.notes || "" }); }
     catch(e) { console.error(e); }
   };
+
   const del = async (id) => {
     try { await db.collection(path).doc(id).delete(); }
     catch(e) { console.error(e); }
   };
+
   const getRepas = (jour, moment) => repas.find(r => r.jour === jour && r.moment === moment);
-
-  // Courses CRUD
-  const addCourse = async () => {
-    if (!coursesPath || !newCourse.trim()) return;
-    await db.collection(coursesPath).add({ nom: newCourse.trim(), fait: false, by: user.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    setNewCourse("");
-  };
-  const toggleCourse = async (id, fait) => {
-    if (!coursesPath) return;
-    await db.collection(coursesPath).doc(id).update({ fait: !fait });
-  };
-  const deleteCourse = async (id) => {
-    if (!coursesPath) return;
-    await db.collection(coursesPath).doc(id).delete();
-  };
-  const clearDone = () => courses.filter(c => c.fait).forEach(c => deleteCourse(c.id));
-
-  const todo = courses.filter(c => !c.fait);
-  const done = courses.filter(c => c.fait);
 
   return (
     <div className="px-4 pt-4 pb-32">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">Repas 🍽️</h2>
       </div>
 
-      {/* Onglets Planning / Courses */}
-      <div className="flex mb-4 p-1 rounded-xl" style={{ background: "var(--input-bg)" }}>
-        <button onClick={() => setView("planning")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
-          style={{ background: view === "planning" ? "var(--card)" : "transparent", color: view === "planning" ? "var(--text)" : "var(--secondary)" }}>
-          📋 Planning
-        </button>
-        <button onClick={() => setView("courses")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
-          style={{ background: view === "courses" ? "var(--card)" : "transparent", color: view === "courses" ? "var(--text)" : "var(--secondary)" }}>
-          🛒 Courses {todo.length > 0 && <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full gradient-bg text-white">{todo.length}</span>}
-        </button>
-      </div>
-
-      {/* Vue Planning */}
-      {view === "planning" && <>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <div style={{ minWidth: "340px" }}>
-            <div className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
-              <div />
-              {MOMENTS.map(m => (
-                <div key={m} className="text-center text-xs font-semibold" style={{ color: "var(--secondary)" }}>{m}</div>
-              ))}
-            </div>
-            {JOURS.map(jour => (
-              <div key={jour} className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
-                <div className="flex items-center text-sm font-medium" style={{ color: "var(--secondary)" }}>{jour}</div>
-                {MOMENTS.map(moment => {
-                  const r = getRepas(jour, moment);
-                  return (
-                    <div key={moment}
-                      onClick={() => r ? setEditItem(r) : setAddSlot({ jour, moment })}
-                      className="rounded-xl p-2 min-h-12 flex flex-col items-center justify-center cursor-pointer transition-all"
-                      style={{ background: r ? "var(--card)" : "var(--input-bg)", border: r ? "1px solid var(--border)" : "1px dashed var(--border)" }}>
-                      {r ? (
-                        <>
-                          <span className="text-xs font-semibold text-center leading-tight">{r.plat}</span>
-                          <UserBadge uid={r.by} members={members} />
-                        </>
-                      ) : (
-                        <span className="text-lg" style={{ color: "var(--accent)" }}>+</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+      <div className="overflow-x-auto -mx-4 px-4">
+        <div style={{ minWidth: "340px" }}>
+          {/* En-tête moments */}
+          <div className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
+            <div />
+            {MOMENTS.map(m => (
+              <div key={m} className="text-center text-xs font-semibold" style={{ color: "var(--secondary)" }}>{m}</div>
             ))}
           </div>
-        </div>
-        {addSlot && (
-          <RepasModal slot={addSlot} onClose={() => setAddSlot(null)} onSave={(form) => { add({ ...addSlot, ...form }); setAddSlot(null); }} />
-        )}
-        {editItem && (
-          <RepasModal slot={editItem} existing={editItem} onClose={() => setEditItem(null)}
-            onSave={(form) => { edit(editItem.id, form); setEditItem(null); }}
-            onDelete={() => { del(editItem.id); setEditItem(null); }} />
-        )}
-      </>}
 
-      {/* Vue Courses */}
-      {view === "courses" && <>
-        {/* Saisie */}
-        <div className="flex gap-2 mb-5">
-          <input className="input flex-1 rounded-xl px-3 py-2.5 text-sm" placeholder="Ajouter un article…"
-            value={newCourse} onChange={e => setNewCourse(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addCourse()} />
-          <button onClick={addCourse}
-            className="w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold gradient-bg text-white flex-shrink-0"
-            disabled={!newCourse.trim()} style={{ opacity: newCourse.trim() ? 1 : 0.4 }}>+</button>
-        </div>
-
-        {/* Liste vide */}
-        {courses.length === 0 && (
-          <div className="text-center py-10" style={{ color: "var(--secondary)" }}>
-            <div className="text-4xl mb-3">🛒</div>
-            <p className="text-sm">Liste vide — ajoute tes articles !</p>
-          </div>
-        )}
-
-        {/* Articles à acheter */}
-        {todo.map(c => (
-          <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl mb-2"
-            style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            <button onClick={() => toggleCourse(c.id, c.fait)}
-              className="w-6 h-6 rounded-full border-2 flex-shrink-0"
-              style={{ borderColor: "var(--accent)" }} />
-            <span className="flex-1 text-sm font-medium">{c.nom}</span>
-            <UserBadge uid={c.by} members={members} />
-            <button onClick={() => deleteCourse(c.id)} className="text-base opacity-30 hover:opacity-80 px-1"
-              style={{ color: "var(--secondary)" }}>✕</button>
-          </div>
-        ))}
-
-        {/* Articles achetés */}
-        {done.length > 0 && <>
-          <div className="flex items-center justify-between mt-5 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--secondary)" }}>Dans le panier ({done.length})</span>
-            <button onClick={clearDone} className="text-xs px-2 py-1 rounded-lg" style={{ color: "#f87171", background: "rgba(248,113,113,0.1)" }}>Vider</button>
-          </div>
-          {done.map(c => (
-            <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl mb-2 opacity-50"
-              style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
-              <button onClick={() => toggleCourse(c.id, c.fait)}
-                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 gradient-bg text-white text-xs">✓</button>
-              <span className="flex-1 text-sm line-through">{c.nom}</span>
-              <button onClick={() => deleteCourse(c.id)} className="text-base opacity-30 hover:opacity-80 px-1"
-                style={{ color: "var(--secondary)" }}>✕</button>
+          {/* Lignes jours */}
+          {JOURS.map(jour => (
+            <div key={jour} className="grid mb-2" style={{ gridTemplateColumns: "80px repeat(3, 1fr)", gap: "6px" }}>
+              <div className="flex items-center text-sm font-medium" style={{ color: "var(--secondary)" }}>{jour}</div>
+              {MOMENTS.map(moment => {
+                const r = getRepas(jour, moment);
+                return (
+                  <div key={moment}
+                    onClick={() => r ? setEditItem(r) : setAddSlot({ jour, moment })}
+                    className="rounded-xl p-2 min-h-12 flex flex-col items-center justify-center cursor-pointer transition-all"
+                    style={{ background: r ? "var(--card)" : "var(--input-bg)", border: r ? "1px solid var(--border)" : "1px dashed var(--border)" }}>
+                    {r ? (
+                      <>
+                        <span className="text-xs font-semibold text-center leading-tight">{r.plat}</span>
+                        <UserBadge uid={r.by} members={members} />
+                      </>
+                    ) : (
+                      <span className="text-lg" style={{ color: "var(--border)" }}>+</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
-        </>}
-      </>}
+        </div>
+      </div>
+
+      {addSlot && (
+        <RepasModal slot={addSlot} onClose={() => setAddSlot(null)} onSave={(form) => { add({ ...addSlot, ...form }); setAddSlot(null); }} />
+      )}
+      {editItem && (
+        <RepasModal slot={editItem} existing={editItem} onClose={() => setEditItem(null)}
+          onSave={(form) => { edit(editItem.id, form); setEditItem(null); }}
+          onDelete={() => { del(editItem.id); setEditItem(null); }} />
+      )}
     </div>
   );
 }
@@ -2562,7 +2484,7 @@ function RepasModal({ slot, existing, onClose, onSave, onDelete }) {
 
   return (
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)", maxHeight: "90vh", overflowY: "auto", paddingBottom: "120px" }} onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-t-3xl p-6" style={{ background: "var(--card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "90px" }} onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold mb-1">{slot.jour} — {slot.moment} 🍽️</h3>
         <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>{existing ? "Modifier le repas" : "Ajouter un repas"}</p>
         <input className="input w-full mb-3" placeholder="Plat (ex: Pâtes bolognaise)" value={plat} onChange={e => setPlat(e.target.value)} />
@@ -2989,7 +2911,7 @@ function ChatTab({ spaceId, user, userData, members }) {
         text: t,
         authorId:    user.uid,
         authorName:  userData?.name  || user.displayName || "Moi",
-        authorEmoji: userData?.emoji || "👋",
+        authorEmoji: userData?.emoji || "🦖",
         day:         today,
         createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
       });
@@ -3039,7 +2961,7 @@ function ChatTab({ spaceId, user, userData, members }) {
           background:"#22c55e", color:"white", borderRadius:"20px", padding:"8px 18px",
           fontSize:"0.85rem", fontWeight:600, zIndex:300, boxShadow:"0 4px 14px rgba(0,0,0,0.35)",
           whiteSpace:"nowrap", pointerEvents:"none" }}>
-          📢 Ping envoyé à {pingSent} !
+          📣 Ping envoyé à {pingSent} !
         </div>
       )}
 
@@ -3077,7 +2999,7 @@ function ChatTab({ spaceId, user, userData, members }) {
                       display:"flex", alignItems:"center", justifyContent:"center",
                       fontSize:"1.1rem", flexShrink:0, border:"1px solid var(--border)",
                       opacity: showAuthor ? 1 : 0 }}>
-                      {msg.authorEmoji || "👋"}
+                      {msg.authorEmoji || "🦖"}
                     </div>
                   )}
                   <div style={{ maxWidth:"72%", display:"flex", flexDirection:"column",
@@ -3122,7 +3044,7 @@ function ChatTab({ spaceId, user, userData, members }) {
                 background:"var(--input-bg)", border:"1px solid var(--input-border)",
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontSize:"1.1rem", cursor:"pointer" }}>
-              📢
+              📣
             </button>
           )}
           <textarea
@@ -3147,7 +3069,7 @@ function ChatTab({ spaceId, user, userData, members }) {
               borderColor: text.trim() ? "transparent" : "var(--input-border)",
               color: text.trim() ? "white" : "var(--secondary)" }}
           >
-            {sending ? "…" : "⤳"}
+            {sending ? "…" : "➤"}
           </button>
         </div>
       </div>
@@ -3163,7 +3085,7 @@ function ChatTab({ spaceId, user, userData, members }) {
               padding:"20px 20px", paddingBottom:"calc(20px + env(safe-area-inset-bottom))" }}>
             <div style={{ width:"36px", height:"4px", background:"var(--border)",
               borderRadius:"2px", margin:"0 auto 16px" }} />
-            <p style={{ fontWeight:700, fontSize:"1.05rem", marginBottom:"4px" }}>📢 Envoyer un ping</p>
+            <p style={{ fontWeight:700, fontSize:"1.05rem", marginBottom:"4px" }}>📣 Envoyer un ping</p>
             <p style={{ color:"var(--secondary)", fontSize:"0.82rem", marginBottom:"16px", lineHeight:"1.5" }}>
               La personne reçoit une notification pour venir voir le chat !
             </p>
@@ -3241,7 +3163,7 @@ const FOCUS_QUOTES = [
   "Soit cohérent, pas parfait.",
 ];
 
-const HABIT_EMOJIS = ["✅","💪","🏃","📚","💧","🧘","😴","🥗","🚴","🏄","✍️","🧹","🍃","🎵","🌅","🛏️","🧠","❤️"];
+const HABIT_EMOJIS = ["✅","💪","🏃","📚","💧","🧘","😴","🥗","🚴","🎯","✍️","🧹","🌿","🎵","🌅","🛁","🧠","❤️"];
 
 function FocusScreen({ spaceId, user }) {
   const { showConfirm, ConfirmModal } = useConfirm();
@@ -3552,7 +3474,7 @@ function FocusScreen({ spaceId, user }) {
 function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeChange }) {
   const spaceMode = space?.mode || "social";
 
-  // Détermine les modules actifs pour un espace social
+  // Détermine les modules actifs pour un espace
   const getSpaceModules = (sp) => {
     if (spaceMode === "focus")     return FOCUS_MODULES;
     if (spaceMode === "coworking") return COWORK_TABS;
@@ -3649,7 +3571,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
           <button onClick={() => setShowSettings(true)} className="text-white/70 px-2 py-1 rounded-full text-base"
             style={{ background: "rgba(0,0,0,0.25)" }}>⚙️</button>
           <button onClick={() => setShowInfo(true)} className="text-white/70 px-2.5 py-1 rounded-full text-sm font-bold"
-            style={{ background: "rgba(0,0,0,0.25)" }}>···</button>
+            style={{ background: "rgba(0,0,0,0.25)" }}>⋯</button>
         </div>
       </div>
 
@@ -3680,7 +3602,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
         </>
       )}
 
-      {/* Barre de navigation en bas (cachée en mode Focus) */}
+      {/* Barre de navigation en bas */}
       <div className="bottom-nav">
           {spaceModules.length <= 4 ? (
             /* Mode normal : ≤ 4 modules */
@@ -3732,7 +3654,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                   <button onClick={() => setFabOpen(o => !o)}
                     className="gradient-bg w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform"
                     style={{ marginTop: "-18px", transform: fabOpen ? "rotate(45deg)" : "none" }}>
-                    <span className="text-white font-bold text-xl leading-none">{fabOpen ? "×" : "···"}</span>
+                    <span className="text-white font-bold text-xl leading-none">{fabOpen ? "×" : "⋯"}</span>
                   </button>
                 </div>
                 {/* Droite : avant-dernier utilisé */}
@@ -3751,6 +3673,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
             </>
           )}
         </div>
+
       {/* Modal infos espace */}
       {showInfo && (
         <div className="modal-overlay" onClick={() => setShowInfo(false)}>
@@ -3897,12 +3820,12 @@ function App() {
   const [user,         setUser]         = useState(undefined);
   const [userData,     setUserData]     = useState(null);
   const [currentSpace, setCurrentSpace] = useState(null);
-  const [themeId,      setThemeId]      = useState("mauve");
+  const [themeId,      setThemeId]      = useState("foret");
 
   // Init thème depuis localStorage
   useEffect(() => {
     const saved = localStorage.getItem('planio-theme');
-    const theme = THEMES.find(t => t.id === saved) || THEMES[0];
+    const theme = THEMES.find(t => t.id === saved) || THEMES[0]; // default: Forêt
     setThemeId(theme.id);
     applyTheme(theme);
   }, []);
@@ -3915,7 +3838,15 @@ function App() {
       if (u) {
         askAndSavePush(u.uid);
         unsubUser = db.collection("users").doc(u.uid).onSnapshot(doc => {
-          if (doc.exists) setUserData(doc.data());
+          if (doc.exists) {
+            const data = doc.data();
+            setUserData(data);
+            const savedThemeId = data?.settings?.theme;
+            if (savedThemeId) {
+              const t = THEMES.find(th => th.id === savedThemeId);
+              if (t) { setThemeId(t.id); applyTheme(t); }
+            }
+          }
         });
       } else {
         setUserData(null);
@@ -3927,6 +3858,9 @@ function App() {
   const handleThemeChange = (theme) => {
     setThemeId(theme.id);
     applyTheme(theme);
+    if (user?.uid) {
+      db.collection('users').doc(user.uid).set({ settings: { theme: theme.id } }, { merge: true }).catch(() => {});
+    }
   };
 
   if (user === undefined) return <Spinner />;
