@@ -773,6 +773,7 @@ function ActivitesTab({ spaceId, user, members }) {
   const [lightbox, setLightbox]   = useState(null); // { itemId, idx }
   const { showConfirm, ConfirmModal } = useConfirm();
   const touchStartRef = useRef(null);
+  const swipedRef = useRef(false);
   const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
   const items = useCollection(path);
 
@@ -969,17 +970,27 @@ function ActivitesTab({ spaceId, user, members }) {
         const hasPrev = lightbox.idx > 0;
         const hasNext = lightbox.idx < lbPhotos.length - 1;
         return (
-          <div onClick={() => setLightbox(null)}
-            onTouchStart={e => { touchStartRef.current = e.touches[0].clientX; }}
-            onTouchEnd={e => {
-              if (touchStartRef.current === null) return;
-              const dx = e.changedTouches[0].clientX - touchStartRef.current;
-              touchStartRef.current = null;
-              if (dx > 50 && hasPrev) { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx - 1 })); }
-              else if (dx < -50 && hasNext) { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx + 1 })); }
+          <div
+            onClick={() => { if (swipedRef.current) { swipedRef.current = false; return; } setLightbox(null); }}
+            onTouchStart={e => { touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; swipedRef.current = false; }}
+            onTouchMove={e => {
+              if (!touchStartRef.current) return;
+              const dx = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
+              const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+              if (dx > dy && dx > 10) e.preventDefault();
             }}
-            style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "pan-y" }}>
-            <img src={lbUrl} alt="photo" style={{ maxWidth: "85vw", maxHeight: "75vh", borderRadius: 12, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", userSelect: "none", pointerEvents: "none" }} />
+            onTouchEnd={e => {
+              if (!touchStartRef.current) return;
+              const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+              touchStartRef.current = null;
+              if (Math.abs(dx) > 40) {
+                swipedRef.current = true;
+                if (dx > 40 && hasPrev) setLightbox(lb => ({ ...lb, idx: lb.idx - 1 }));
+                else if (dx < -40 && hasNext) setLightbox(lb => ({ ...lb, idx: lb.idx + 1 }));
+              }
+            }}
+            style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "none", overscrollBehavior: "none" }}>
+            <img src={lbUrl} alt="photo" style={{ maxWidth: "85vw", maxHeight: "75vh", borderRadius: 12, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", userSelect: "none", pointerEvents: "none", WebkitUserDrag: "none" }} />
             <button onClick={e => { e.stopPropagation(); setLightbox(null); }} style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.4rem", borderRadius: "50%", width: 40, height: 40, cursor: "pointer" }}>✕</button>
             {lbPhotos.length > 1 && <div style={{ position: "absolute", top: 22, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 600, background: "rgba(0,0,0,0.4)", padding: "4px 14px", borderRadius: 20 }}>{lightbox.idx + 1} / {lbPhotos.length}</div>}
             {hasPrev && <button onClick={e => { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx - 1 })); }} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.6rem", borderRadius: "50%", width: 44, height: 44, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{'\u2039'}</button>}
