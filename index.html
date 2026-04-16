@@ -54,7 +54,7 @@
 <div id="root"></div>
 
 <script type="text/babel" data-presets="env,react">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 
 // ================================================================
 //  HOOK : modal de confirmation (remplace window.confirm pour PWA)
@@ -770,10 +770,24 @@ function ActivitesTab({ spaceId, user, members }) {
   const [modal, setModal]       = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [uploading, setUploading] = useState({});
-  const [lightbox, setLightbox]   = useState(null); // { url, itemId, idx }
+  const [lightbox, setLightbox]   = useState(null); // { itemId, idx }
   const { showConfirm, ConfirmModal } = useConfirm();
+  const touchStartRef = useRef(null);
   const path  = spaceId ? `spaces/${spaceId}/${sub}` : null;
   const items = useCollection(path);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const handleKey = (e) => {
+      const it = items.find(i => i.id === lightbox.itemId);
+      const photos = it?.photos || [];
+      if (e.key === 'ArrowRight' && lightbox.idx < photos.length - 1) setLightbox(lb => ({ ...lb, idx: lb.idx + 1 }));
+      else if (e.key === 'ArrowLeft' && lightbox.idx > 0) setLightbox(lb => ({ ...lb, idx: lb.idx - 1 }));
+      else if (e.key === 'Escape') setLightbox(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [lightbox, items]);
 
   const add = async (form) => {
     try { await db.collection(path).add({ title: form.title, desc: form.desc || "", date: form.date || "", by: user.uid, done: false, photos: [], createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
@@ -895,7 +909,7 @@ function ActivitesTab({ spaceId, user, members }) {
                       <div className="flex gap-2 flex-wrap" style={{ marginBottom: "8px" }}>
                         {visible.map((p, i) => (
                           <div key={i} style={{ position: "relative", flexShrink: 0 }}>
-                            <div onClick={() => setLightbox({ url: p.dataUrl || p.url, name: p.name, itemId: item.id, idx: i })} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative" }}>
+                            <div onClick={() => setLightbox({ itemId: item.id, idx: i })} style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", cursor: "pointer", border: "1.5px solid rgba(74,222,128,0.4)", position: "relative" }}>
                               <img src={p.dataUrl || p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                               {i === 2 && extra > 0 && (
                                 <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", color: "#d1fae5", fontSize: "0.85rem", fontWeight: 700 }}>+{extra}</div>
@@ -945,16 +959,41 @@ function ActivitesTab({ spaceId, user, members }) {
           onSave={(form) => edit(editItem.id, form)}
         />
       )}
-      {lightbox && (
-        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <img src={lightbox.url} alt="photo" style={{ maxWidth: "95vw", maxHeight: "85vh", borderRadius: 12, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.7)" }} />
-          <button onClick={() => setLightbox(null)} style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.4rem", borderRadius: "50%", width: 40, height: 40, cursor: "pointer" }}>✕</button>
-          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 30, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 10 }}>
-            <button onClick={async e => { e.stopPropagation(); const url = lightbox.url; const filename = lightbox.name || 'photo.jpg'; try { const res = await fetch(url); const blob = await res.blob(); const file = new File([blob], filename, { type: blob.type || 'image/jpeg' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: filename }); return; } } catch(_) {} const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); }} style={{ background: "#0f2a1a", border: "1px solid #4ade80", color: "#4ade80", padding: "8px 22px", borderRadius: 20, cursor: "pointer", fontSize: "0.9rem", fontWeight: 600 }}>⬇ Télécharger</button>
-            <button onClick={async e => { e.stopPropagation(); if (await showConfirm('Supprimer cette photo ?')) { await deletePhoto(lightbox.itemId, lightbox.idx); setLightbox(null); } }} style={{ background: "#2d1520", border: "1px solid #f87171", color: "#f87171", padding: "8px 22px", borderRadius: 20, cursor: "pointer", fontSize: "0.9rem", fontWeight: 600 }}>🗑 Supprimer</button>
+      {lightbox && (() => {
+        const lbItem = items.find(i => i.id === lightbox.itemId);
+        const lbPhotos = lbItem?.photos || [];
+        const lbPhoto = lbPhotos[lightbox.idx];
+        if (!lbPhoto) return null;
+        const lbUrl = lbPhoto.dataUrl || lbPhoto.url;
+        const lbName = lbPhoto.name || 'photo.jpg';
+        const hasPrev = lightbox.idx > 0;
+        const hasNext = lightbox.idx < lbPhotos.length - 1;
+        return (
+          <div onClick={() => setLightbox(null)}
+            onTouchStart={e => { touchStartRef.current = e.touches[0].clientX; }}
+            onTouchEnd={e => {
+              if (touchStartRef.current === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartRef.current;
+              touchStartRef.current = null;
+              if (dx > 50 && hasPrev) { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx - 1 })); }
+              else if (dx < -50 && hasNext) { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx + 1 })); }
+            }}
+            style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", touchAction: "pan-y" }}>
+            <img src={lbUrl} alt="photo" style={{ maxWidth: "85vw", maxHeight: "75vh", borderRadius: 12, objectFit: "contain", boxShadow: "0 8px 40px rgba(0,0,0,0.7)", userSelect: "none", pointerEvents: "none" }} />
+            <button onClick={e => { e.stopPropagation(); setLightbox(null); }} style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.4rem", borderRadius: "50%", width: 40, height: 40, cursor: "pointer" }}>✕</button>
+            {lbPhotos.length > 1 && <div style={{ position: "absolute", top: 22, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 600, background: "rgba(0,0,0,0.4)", padding: "4px 14px", borderRadius: 20 }}>{lightbox.idx + 1} / {lbPhotos.length}</div>}
+            {hasPrev && <button onClick={e => { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx - 1 })); }} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.6rem", borderRadius: "50%", width: 44, height: 44, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{'\u2039'}</button>}
+            {hasNext && <button onClick={e => { e.stopPropagation(); setLightbox(lb => ({ ...lb, idx: lb.idx + 1 })); }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "none", color: "white", fontSize: "1.6rem", borderRadius: "50%", width: 44, height: 44, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{'\u203A'}</button>}
+            {lbPhotos.length > 1 && <div style={{ position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6 }}>
+              {lbPhotos.map((_, di) => <div key={di} style={{ width: di === lightbox.idx ? 18 : 7, height: 7, borderRadius: 4, background: di === lightbox.idx ? "#4ade80" : "rgba(255,255,255,0.35)", transition: "all 0.2s" }} />)}
+            </div>}
+            <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 30, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 10 }}>
+              <button onClick={async e => { e.stopPropagation(); try { const res = await fetch(lbUrl); const blob = await res.blob(); const file = new File([blob], lbName, { type: blob.type || 'image/jpeg' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: lbName }); return; } } catch(_) {} const a = document.createElement('a'); a.href = lbUrl; a.download = lbName; a.click(); }} style={{ background: "#0f2a1a", border: "1px solid #4ade80", color: "#4ade80", padding: "8px 22px", borderRadius: 20, cursor: "pointer", fontSize: "0.9rem", fontWeight: 600 }}>⬇ Télécharger</button>
+              <button onClick={async e => { e.stopPropagation(); if (await showConfirm('Supprimer cette photo ?')) { await deletePhoto(lightbox.itemId, lightbox.idx); if (lbPhotos.length <= 1) setLightbox(null); else if (lightbox.idx >= lbPhotos.length - 1) setLightbox(lb => ({ ...lb, idx: lb.idx - 1 })); } }} style={{ background: "#2d1520", border: "1px solid #f87171", color: "#f87171", padding: "8px 22px", borderRadius: 20, cursor: "pointer", fontSize: "0.9rem", fontWeight: 600 }}>🗑 Supprimer</button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {ConfirmModal}
     </div>
   );
