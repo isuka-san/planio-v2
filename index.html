@@ -57,60 +57,6 @@
 const { useState, useEffect, useRef, useCallback } = React;
 
 // ================================================================
-//  COMPOSANT ICÔNES SVG (style Heroicons outline)
-// ================================================================
-function Icon(props) {
-  var name = props.name, size = props.size || 20, color = props.color || "currentColor";
-  var s = { display: "inline-block", verticalAlign: "middle", flexShrink: 0 };
-  if (props.style) { for (var k in props.style) s[k] = props.style[k]; }
-  var h = React.createElement;
-  var a = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", style: s };
-  var icons = {
-    target: [["circle",{cx:"12",cy:"12",r:"3"}],["circle",{cx:"12",cy:"12",r:"9"}],["path",{d:"M12 2v4m0 12v4M2 12h4m12 0h4"}]],
-    star: [["path",{d:"m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-5.82 3.25L7 14.14 2 9.27l6.91-1.01z"}]],
-    film: [["rect",{x:"2",y:"2",width:"20",height:"20",rx:"2.18"}],["path",{d:"M7 2v20M17 2v20M2 12h20M2 7h5m10 0h5M2 17h5m10 0h5"}]],
-    music: [["path",{d:"M9 18V5l12-2v13"}],["circle",{cx:"6",cy:"18",r:"3"}],["circle",{cx:"18",cy:"16",r:"3"}]],
-    gamepad: [["path",{d:"M6 12h4m-2-2v4M15 11h.01M18 13h.01"}],["rect",{x:"2",y:"6",width:"20",height:"12",rx:"2"}]],
-    wallet: [["path",{d:"M21 12V7H5a2 2 0 010-4h14v4M3 5v14a2 2 0 002 2h16v-5"}],["path",{d:"M18 12a2 2 0 000 4h4v-4z"}]],
-    utensils: [["path",{d:"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3v7"}]],
-    "check-circle": [["path",{d:"M22 11.08V12a10 10 0 11-5.93-9.14"}],["path",{d:"M22 4L12 14.01l-3-3"}]],
-    folder: [["path",{d:"M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"}]],
-    "file-text": [["path",{d:"M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"}],["path",{d:"M14 2v6h6M16 13H8m8 4H8m2-8H8"}]],
-    link: [["path",{d:"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"}],["path",{d:"M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"}]],
-    message: [["path",{d:"M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"}]],
-    users: [["path",{d:"M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"}],["circle",{cx:"9",cy:"7",r:"4"}],["path",{d:"M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"}]],
-    briefcase: [["rect",{x:"2",y:"7",width:"20",height:"14",rx:"2"}],["path",{d:"M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"}]],
-    settings: [["circle",{cx:"12",cy:"12",r:"3"}],["path",{d:"M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"}]],
-    plane: [["path",{d:"M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.3c.4-.2.6-.6.5-1.1z"}]],
-    camera: [["path",{d:"M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"}],["circle",{cx:"12",cy:"13",r:"4"}]],
-    tv: [["rect",{x:"2",y:"7",width:"20",height:"15",rx:"2"}],["path",{d:"M17 2l-5 5-5-5"}]],
-    heart: [["path",{d:"M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"}]],
-    "heart-filled": [["path",{d:"M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z",fill:color||"currentColor"}]],
-    fire: [["path",{d:"M12 12c2-2.96 0-7-1-8 0 3.04-1.77 4.74-3 6-1.23 1.26-2 3.24-2 5a6 6 0 1012 0c0-1.53-1.06-3.94-2-5-1.79 3-2 2-4 2z"}]],
-    "fire-filled": [["path",{d:"M12 12c2-2.96 0-7-1-8 0 3.04-1.77 4.74-3 6-1.23 1.26-2 3.24-2 5a6 6 0 1012 0c0-1.53-1.06-3.94-2-5-1.79 3-2 2-4 2z",fill:color||"currentColor"}]],
-    bolt: [["path",{d:"M13 2L3 14h9l-1 8 10-12h-9z"}]],
-    calendar: [["rect",{x:"3",y:"4",width:"18",height:"18",rx:"2"}],["path",{d:"M16 2v4M8 2v4M3 10h18"}]],
-    rocket: [["path",{d:"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09zM12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"}]],
-    compass: [["circle",{cx:"12",cy:"12",r:"10"}],["path",{d:"M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"}]],
-    scale: [["path",{d:"M12 3v18M5 8l7-5 7 5M3 13l2-5 2 5c0 1.1-.9 2-2 2s-2-.9-2-2zM17 13l2-5 2 5c0 1.1-.9 2-2 2s-2-.9-2-2z"}]],
-    "trending-up": [["path",{d:"M23 6l-9.5 9.5-5-5L1 18M17 6h6v6"}]],
-    leaf: [["path",{d:"M11 20A7 7 0 019.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 1 8-1.5 5.5-5 7-9 10z"}],["path",{d:"M10 10c3.3 2.7 5 6.5 5.5 10"}]],
-    download: [["path",{d:"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"}]],
-    trash: [["path",{d:"M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"}]],
-    plus: [["path",{d:"M12 5v14M5 12h14"}]],
-    check: [["path",{d:"M20 6L9 17l-5-5"}]],
-  };
-  var data = icons[name];
-  if (!data) return null;
-  var children = data.map(function(el, i) {
-    var attrs = { key: i };
-    for (var k in el[1]) attrs[k] = el[1][k];
-    return h(el[0], attrs);
-  });
-  return h('svg', a, children);
-}
-
-// ================================================================
 //  HOOK : modal de confirmation (remplace window.confirm pour PWA)
 // ================================================================
 const useConfirm = () => {
@@ -250,41 +196,42 @@ function applyTheme(theme) {
 //  CONSTANTES
 // ================================================================
 const TABS = [
-  { id: "activites", label: "Activités", icon: "target" },
-  { id: "idees",     label: "Idées",     icon: "star" },
-  { id: "films",     label: "Films",     icon: "film" },
-  { id: "musique",   label: "Musique",   icon: "music" },
-  { id: "jeux",      label: "Jeux",      icon: "gamepad" },
+  { id: "activites", label: "Activités", emoji: "🎯" },
+  { id: "idees",     label: "Idées",     emoji: "⭐" },
+  { id: "films",     label: "Films",     emoji: "🎬" },
+  { id: "musique",   label: "Musique",   emoji: "🎵" },
+  { id: "jeux",      label: "Jeux",      emoji: "🎮" },
 ];
 
+// Tous les modules disponibles pour l'espace social
 const SOCIAL_MODULES = [
-  { id: "activites", label: "Activités", icon: "target",   desc: "Sorties, voyages, projets" },
-  { id: "idees",     label: "Idées",     icon: "star",     desc: "Suggestions et wishlists" },
-  { id: "films",     label: "Films",     icon: "film",     desc: "Films & séries avec progression" },
-  { id: "musique",   label: "Musique",   icon: "music",    desc: "Artistes et albums partagés" },
-  { id: "jeux",      label: "Jeux",      icon: "gamepad",  desc: "Bibliothèque de jeux" },
-  { id: "depenses",  label: "Dépenses",  icon: "wallet",   desc: "Partage des dépenses communes" },
-  { id: "repas",     label: "Repas",     icon: "utensils",  desc: "Planning repas et recettes" },
+  { id: "activites", label: "Activités", emoji: "🎯", desc: "Sorties, voyages, projets" },
+  { id: "idees",     label: "Idées",     emoji: "⭐", desc: "Suggestions et wishlists" },
+  { id: "films",     label: "Films",     emoji: "🎬", desc: "Films & séries avec progression" },
+  { id: "musique",   label: "Musique",   emoji: "🎵", desc: "Artistes et albums partagés" },
+  { id: "jeux",      label: "Jeux",      emoji: "🎮", desc: "Bibliothèque de jeux" },
+  { id: "depenses",  label: "Dépenses",  emoji: "💸", desc: "Partage des dépenses communes" },
+  { id: "repas",     label: "Repas",     emoji: "🍽️", desc: "Planning repas et recettes" },
 ];
 
 const FOCUS_MODULES = [
-  { id: "focus_today", label: "Aujourd'hui", icon: "target" },
-  { id: "depenses",    label: "Dépenses",    icon: "wallet" },
-  { id: "repas",       label: "Repas",       icon: "utensils" },
+  { id: "focus_today", label: "Aujourd'hui", emoji: "🎯" },
+  { id: "depenses",    label: "Dépenses",    emoji: "💸" },
+  { id: "repas",       label: "Repas",       emoji: "🍽️" },
 ];
 
 const COWORK_TABS = [
-  { id: "taches",  label: "Tâches",  icon: "check-circle" },
-  { id: "projets", label: "Projets", icon: "folder" },
-  { id: "notes",   label: "Notes",   icon: "file-text" },
-  { id: "liens",   label: "Liens",   icon: "link" },
-  { id: "chat",    label: "Chat",    icon: "message" },
+  { id: "taches",  label: "Tâches",  emoji: "✅" },
+  { id: "projets", label: "Projets", emoji: "📁" },
+  { id: "notes",   label: "Notes",   emoji: "📝" },
+  { id: "liens",   label: "Liens",   emoji: "🔗" },
+  { id: "chat",    label: "Chat",    emoji: "💬" },
 ];
 
 const SPACE_MODES = [
-  { id: "social",    name: "Social",    icon: "users",     desc: "Activités, films, musique, jeux…" },
-  { id: "coworking", name: "Coworking", icon: "briefcase", desc: "Tâches, projets, notes, liens…"  },
-  { id: "focus",     name: "Focus",     icon: "target",    desc: "Habitudes, tâches du jour, suivi perso…" },
+  { id: "social",    name: "Social",    emoji: "👥", desc: "Activités, films, musique, jeux…" },
+  { id: "coworking", name: "Coworking", emoji: "💼", desc: "Tâches, projets, notes, liens…"  },
+  { id: "focus",     name: "Focus",     emoji: "🎯", desc: "Habitudes, tâches du jour, suivi perso…" },
 ];
 
 const EMOJIS = ["🦖","🟣","🦊","🐻","🦁","🐯","🦅","🦋","🌟","🔥","💎","🎯","🎸","🚀","🌈","🍕","🐉","⚡"];
@@ -351,10 +298,10 @@ function UserBadge({ uid, members }) {
   );
 }
 
-function EmptyState({ icon, text }) {
+function EmptyState({ emoji, text }) {
   return (
     <div className="flex flex-col items-center justify-center py-16" style={{ color: "var(--inactive)" }}>
-      <div className="mb-3"><Icon name={icon} size={48} /></div>
+      <div className="text-5xl mb-3">{emoji}</div>
       <p className="text-sm">{text}</p>
     </div>
   );
@@ -524,7 +471,7 @@ function SettingsModal({ onClose, user, currentThemeId, onThemeChange }) {
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="font-bold text-lg flex items-center gap-2">Paramètres <Icon name="settings" size={20} /></h3>
+          <h3 className="font-bold text-lg">Paramètres ⚙️</h3>
           <button onClick={onClose} className="text-2xl leading-none" style={{ color: "var(--inactive)" }}>×</button>
         </div>
 
@@ -653,7 +600,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
           </p>
         </div>
         <button onClick={() => setShowSettings(true)} className="text-xl text-white/70 px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>
-          <Icon name="settings" size={20} />
+          ⚙️
         </button>
       </div>
 
@@ -669,13 +616,13 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
 
       {/* Liste des espaces */}
       {spaces.length === 0 ? (
-        <EmptyState icon="rocket" text="Crée ou rejoins un espace pour commencer" />
+        <EmptyState emoji="🚀" text="Crée ou rejoins un espace pour commencer" />
       ) : (
         <div className="flex flex-col gap-3">
           {spaces.map(s => (
             <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Icon name={SPACE_MODES.find(m => m.id === s.mode)?.icon || "users"} size={24} />
+                <span className="text-2xl">{SPACE_MODES.find(m => m.id === s.mode)?.emoji || "👥"}</span>
                 <div>
                   <p className="font-semibold">{s.name}</p>
                   <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
@@ -708,7 +655,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
                     <button key={m.id} onClick={() => { setSpaceMode(m.id); setCreateStep("name"); }}
                       className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all"
                       style={{ background: "var(--input-bg)", border: "2px solid var(--border)" }}>
-                      <Icon name={m.icon} size={36} />
+                      <span className="text-4xl">{m.emoji}</span>
                       <div>
                         <p className="font-bold text-base" style={{ color: "var(--text)" }}>{m.name}</p>
                         <p className="text-sm" style={{ color: "var(--secondary)" }}>{m.desc}</p>
@@ -722,7 +669,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
             {createStep === "name" && (
               <>
                 <div className="flex items-center gap-2 mb-4 p-3 rounded-xl" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
-                  <Icon name={SPACE_MODES.find(m => m.id === spaceMode)?.icon} size={24} />
+                  <span className="text-2xl">{SPACE_MODES.find(m => m.id === spaceMode)?.emoji}</span>
                   <span className="font-medium" style={{ color: "var(--secondary)" }}>{SPACE_MODES.find(m => m.id === spaceMode)?.name}</span>
                   <button onClick={() => setCreateStep("mode")} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{ color: "var(--accent)", background: "transparent" }}>Changer</button>
                 </div>
@@ -752,7 +699,7 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
                           background: active ? "rgba(var(--grad1-rgb, 249,168,212), 0.12)" : "var(--input-bg)",
                           border: `2px solid ${active ? "var(--accent)" : "var(--border)"}`,
                         }}>
-                        <Icon name={m.icon} size={24} />
+                        <span className="text-2xl">{m.emoji}</span>
                         <div className="flex-1">
                           <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>{m.label}</p>
                           <p className="text-xs" style={{ color: "var(--secondary)" }}>{m.desc}</p>
@@ -955,10 +902,10 @@ function ActivitesTab({ spaceId, user, members }) {
       <div className="gradient-bg p-6 pb-4">
         <h2 className="text-white font-bold text-xl mb-4">Plans</h2>
         <div className="flex rounded-xl p-1 gap-1" style={{ background: "rgba(0,0,0,0.2)" }}>
-          {[["activites","target","Activités"], ["voyages","plane","Voyages"]].map(([t, ic, lbl]) => (
+          {[["activites","🎯 Activités"], ["voyages","✈️ Voyages"]].map(([t, lbl]) => (
             <button key={t} onClick={() => setSub(t)} className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
               style={sub === t ? { background: "white", color: "#be185d" } : { color: "white" }}>
-              <Icon name={ic} size={14} style={{ marginRight: 4 }} /> {lbl}
+              {lbl}
             </button>
           ))}
         </div>
@@ -970,19 +917,19 @@ function ActivitesTab({ spaceId, user, members }) {
         </button>
 
         {items.length === 0
-          ? <EmptyState icon={sub === "activites" ? "target" : "plane"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
+          ? <EmptyState emoji={sub === "activites" ? "🎯" : "✈️"} text={sub === "activites" ? "pas d'activité" : "pas de voyage"} />
           : items.map(item => (
             <div key={item.id} className="card p-4 mb-3" style={item.done ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(134,239,172,0.18), rgba(16,185,129,0.1))", border: "1px solid rgba(74,222,128,0.45)", boxShadow: "0 4px 24px rgba(74,222,128,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
-              {item.done && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{""}</div>}
+              {item.done && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{sub === "activites" ? "📸" : "🗺️"}</div>}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold" style={{ color: item.done ? "#d1fae5" : "var(--text)", textShadow: item.done ? "0 0 10px rgba(74,222,128,0.25)" : "none" }}>{item.title}</span>
-                    {item.done && <span style={{ background: "linear-gradient(135deg, rgba(74,222,128,0.25), rgba(16,185,129,0.15))", color: "#86efac", border: "1px solid rgba(74,222,128,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(74,222,128,0.6)" }}>Exploré</span>}
+                    {item.done && <span style={{ background: "linear-gradient(135deg, rgba(74,222,128,0.25), rgba(16,185,129,0.15))", color: "#86efac", border: "1px solid rgba(74,222,128,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(74,222,128,0.6)" }}>🗺️ Exploré</span>}
                     <UserBadge uid={item.by} members={members} />
                   </div>
                   {item.desc && <p className="text-sm mb-1" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
-                  {item.date && <p className="text-xs" style={{ color: "var(--grad1)" }}><Icon name="calendar" size={12} style={{ marginRight: 3 }} />{new Date(item.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>}
+                  {item.date && <p className="text-xs" style={{ color: "var(--grad1)" }}>📅 {new Date(item.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>}
                 </div>
                 <div className="flex flex-col gap-1">
                   <button onClick={() => toggle(item.id, item.done)} className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
@@ -1017,7 +964,7 @@ function ActivitesTab({ spaceId, user, members }) {
                       </div>
                     )}
                     <label style={{ display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.35)", borderRadius: 20, padding: "4px 12px", fontSize: "0.72rem", color: "#86efac", fontWeight: 600 }}>
-                      {uploading[item.id] ? <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #86efac", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : <Icon name="camera" size={14} />}
+                      {uploading[item.id] ? <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #86efac", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : "📸"}
                       {uploading[item.id] ? "Upload..." : "Ajouter"}
                       <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={e => uploadPhotos(item.id, e.target.files)} />
                     </label>
@@ -1031,7 +978,7 @@ function ActivitesTab({ spaceId, user, members }) {
 
       {modal && (
         <AddModal
-          title={sub === "activites" ? "Nouvelle activité" : "Nouveau voyage"}
+          title={sub === "activites" ? "Nouvelle activité 🎯" : "Nouveau voyage ✈️"}
           fields={[
             { key: "title", label: "Titre",       required: true },
             { key: "desc",  label: "Description", type: "textarea" },
@@ -1165,7 +1112,7 @@ function FilmsTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Films & Séries</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Films & Séries 🎬</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
           {inProgress > 0
             ? `${inProgress} en cours · ${items.filter(i => !i.completed).length - inProgress} à voir`
@@ -1184,18 +1131,18 @@ function FilmsTab({ spaceId, user, members }) {
         </button>
 
         {filtered.length === 0
-          ? <EmptyState icon="film" text="Rien ici !" />
+          ? <EmptyState emoji="🎬" text="Rien ici !" />
           : filtered.map(item => {
             const pct     = getProgress(item);
             const isSerie = item.type === "serie";
             return (
               <div key={item.id} className="card p-4 mb-3" style={item.completed ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(167,139,250,0.18), rgba(109,40,217,0.1))", border: "1px solid rgba(139,92,246,0.45)", boxShadow: "0 4px 24px rgba(139,92,246,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
-                {item.completed && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{""}</div>}
+                {item.completed && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{isSerie ? "📺" : "🎬"}</div>}
                 {/* En-tête */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                      <Icon name={isSerie ? "tv" : "film"} size={16} />
+                      <span>{isSerie ? "📺" : "🎬"}</span>
                       <span className="font-semibold text-sm leading-tight" style={{ color: item.completed ? "#ede9fe" : "var(--text)", textShadow: item.completed ? "0 0 10px rgba(139,92,246,0.25)" : "none" }}>{item.title}</span>
                       {item.completed && <span style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.25), rgba(109,40,217,0.15))", color: "#c4b5fd", border: "1px solid rgba(139,92,246,0.5)", padding: "2px 10px", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.03em", textShadow: "0 0 8px rgba(139,92,246,0.6)" }}>✨ Vu</span>}
                       <UserBadge uid={item.by} members={members} />
@@ -1304,13 +1251,13 @@ function MediaModal({ onClose, onSave, initialData, isEdit }) {
 
         {!isEdit && (
           <div className="flex gap-2 mb-4">
-            {[["film","film","Film"],["serie","tv","Série"]].map(([v,ic,l]) => (
+            {[["film","🎬 Film"],["serie","📺 Série"]].map(([v,l]) => (
               <button key={v} onClick={() => set("type",v)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
                 style={form.type===v
                   ? { background:"linear-gradient(135deg,var(--grad1),var(--grad2))", color:"white" }
                   : { background:"var(--input-bg)", color:"var(--secondary)", border:"1px solid var(--border)" }}>
-                <Icon name={ic} size={14} style={{ marginRight: 4 }} />{l}
+                {l}
               </button>
             ))}
           </div>
@@ -1464,7 +1411,7 @@ function MusiqueTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Musique</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Musique 🎵</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
           {musiques.length} morceau{musiques.length > 1 ? "x" : ""}
         </p>
@@ -1476,7 +1423,7 @@ function MusiqueTab({ spaceId, user, members }) {
         </button>
 
         {musiques.length === 0
-          ? <EmptyState icon="music" text="La liste est vide !" />
+          ? <EmptyState emoji="🎵" text="La liste est vide !" />
           : musiques.map(m => (
             <div key={m.id} className="card p-4 mb-3">
               <div className="flex items-center justify-between gap-2">
@@ -1491,7 +1438,7 @@ function MusiqueTab({ spaceId, user, members }) {
                 <div className="flex flex-col gap-1">
                   <button onClick={() => toggleLike(m.id, m.liked)} className="w-8 h-8 rounded-full flex items-center justify-center"
                     style={{ background: m.liked ? "#3d1830" : "var(--input-bg)", fontSize: "1rem" }}>
-                    {m.liked ? <Icon name="heart-filled" size={18} color="#f87171" /> : <Icon name="heart" size={18} />}
+                    {m.liked ? "❤️" : "🤍"}
                   </button>
                   <button onClick={() => setEditItem(m)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                     style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
@@ -1505,7 +1452,7 @@ function MusiqueTab({ spaceId, user, members }) {
       </div>
 
       {modal && (
-        <AddModal title="Nouveau morceau"
+        <AddModal title="Nouveau morceau 🎵"
           fields={[
             { key: "title",  label: "Titre",    required: true },
             { key: "artist", label: "Artiste",  placeholder: "" },
@@ -1560,7 +1507,7 @@ function JeuxTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Jeux</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Jeux 🎮</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
           {jeux.filter(j => !j.played).length} jeu{jeux.filter(j => !j.played).length > 1 ? "x" : ""} à faire
         </p>
@@ -1577,10 +1524,10 @@ function JeuxTab({ spaceId, user, members }) {
         </button>
 
         {filtered.length === 0
-          ? <EmptyState icon="gamepad" text="Aucun jeu ici !" />
+          ? <EmptyState emoji="🎮" text="Aucun jeu ici !" />
           : filtered.map(jeu => (
             <div key={jeu.id} className="card p-4 mb-3" style={jeu.played ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(217,119,6,0.1))", border: "1px solid rgba(245,158,11,0.45)", boxShadow: "0 4px 24px rgba(245,158,11,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
-              {jeu.played && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>{""}</div>}
+              {jeu.played && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>🎮</div>}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -1608,7 +1555,7 @@ function JeuxTab({ spaceId, user, members }) {
       </div>
 
       {modal && (
-        <AddModal title="Nouveau jeu"
+        <AddModal title="Nouveau jeu 🎮"
           fields={[
             { key: "title", label: "Nom du jeu", required: true },
             { key: "type",  label: "Type", placeholder: "Coop, Solo, Compétitif…" },
@@ -1663,7 +1610,7 @@ function IdeesTab({ spaceId, user, members }) {
   return (
     <div className="px-4 pt-4 pb-32">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold">Idées</h2>
+        <h2 className="text-lg font-bold">Idées ⭐</h2>
         <button onClick={() => setModal(true)} className="gradient-bg text-white text-sm font-semibold px-3 py-2 rounded-xl flex items-center gap-1">
           <span className="text-base">+</span> Ajouter
         </button>
@@ -1675,7 +1622,7 @@ function IdeesTab({ spaceId, user, members }) {
       </div>
 
       {filtered.length === 0
-        ? <EmptyState icon="star" text="pas d'idée" />
+        ? <EmptyState emoji="⭐" text="pas d'idée" />
         : filtered.map(idee => (
           <div key={idee.id} className="card p-4 mb-3" style={idee.done ? { position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(249,168,212,0.18), rgba(190,24,93,0.1))", border: "1px solid rgba(236,72,153,0.45)", boxShadow: "0 4px 24px rgba(236,72,153,0.18), inset 0 1px 0 rgba(255,255,255,0.04)" } : { position: "relative" }}>
             {idee.done && <div style={{ position: "absolute", right: "-10px", top: "-10px", fontSize: "5.5rem", opacity: 0.07, transform: "rotate(12deg)", lineHeight: 1, userSelect: "none", pointerEvents: "none" }}>✨</div>}
@@ -1704,7 +1651,7 @@ function IdeesTab({ spaceId, user, members }) {
       }
 
       {modal && (
-        <AddModal title="Nouvelle idée"
+        <AddModal title="Nouvelle idée ⭐"
           fields={[
             { key: "title", label: "Idée",        required: true },
             { key: "desc",  label: "Description", type: "textarea" },
@@ -1806,9 +1753,9 @@ function DepensesTab({ spaceId, user, members }) {
   return (
     <div className="px-4 pt-4 pb-32">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold">Dépenses</h2>
+        <h2 className="text-lg font-bold">Dépenses 💸</h2>
         <div className="flex gap-2">
-          <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}><Icon name="settings" size={18} /></button>
+          <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚙️</button>
           <button onClick={() => setModal(true)} className="gradient-bg text-white text-sm font-semibold px-3 py-2 rounded-xl flex items-center gap-1">
             <span className="text-base">+</span> Ajouter
           </button>
@@ -1890,7 +1837,7 @@ function DepensesTab({ spaceId, user, members }) {
 
       {/* Liste dépenses */}
       {depenses.length === 0
-        ? <EmptyState icon="wallet" text="aucune dépense" />
+        ? <EmptyState emoji="💸" text="aucune dépense" />
         : depenses.map(dep => {
           const isPro = dep.categorie === 'pro';
           return (
@@ -1900,7 +1847,7 @@ function DepensesTab({ spaceId, user, members }) {
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold">{dep.titre}</span>
                     {isPro
-                      ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(147,197,253,0.2)", color: "#93c5fd" }}>Pro</span>
+                      ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(147,197,253,0.2)", color: "#93c5fd" }}>💼 Pro</span>
                       : <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(134,239,172,0.2)", color: "#86efac" }}>🏠 Perso</span>
                     }
                     <UserBadge uid={dep.payeur} members={members} />
@@ -1956,7 +1903,7 @@ function DepensesModal({ members, user, roundUpStep, onClose, onSave }) {
       <div className="w-full max-w-md rounded-t-3xl flex flex-col" style={{ background: "var(--card)", maxHeight: "88vh" }} onClick={e => e.stopPropagation()}>
         {/* Zone scrollable */}
         <div className="overflow-y-auto p-6 flex-1">
-          <h3 className="text-lg font-bold mb-4">Nouvelle dépense</h3>
+          <h3 className="text-lg font-bold mb-4">Nouvelle dépense 💸</h3>
 
           {/* Toggle Perso / Pro */}
           <div className="flex gap-2 mb-4">
@@ -1966,7 +1913,7 @@ function DepensesModal({ members, user, roundUpStep, onClose, onSave }) {
             </button>
             <button onClick={() => setCategorie("pro")} className="flex-1 py-2 rounded-xl font-semibold text-sm transition-all"
               style={{ background: categorie === "pro" ? "rgba(147,197,253,0.15)" : "var(--input-bg)", color: categorie === "pro" ? "#93c5fd" : "var(--secondary)", border: categorie === "pro" ? "1px solid rgba(147,197,253,0.4)" : "1px solid transparent" }}>
-              Pro
+              💼 Pro
             </button>
           </div>
 
@@ -2029,7 +1976,7 @@ function DepensesSettings({ user, salaire, roundUpStep, onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Icon name="settings" size={20} /> Paramètres financiers</h3>
+        <h3 className="text-lg font-bold mb-4">⚙️ Paramètres financiers</h3>
 
         <div className="mb-4">
           <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>SALAIRE MENSUEL NET (€)</label>
@@ -2196,18 +2143,18 @@ function FocusRepasTab({ spaceId, user }) {
     </div>
   );
 
-  const objetifLabel = { masse: "Prise de masse", perte: "Perte de poids", maintien: "Maintien" }[objectif];
+  const objetifLabel = { masse: "💪 Prise de masse", perte: "🔥 Perte de poids", maintien: "⚖️ Maintien" }[objectif];
   const calColor = calPct > 100 ? "#f87171" : calPct > 85 ? "#fbbf24" : "#86efac";
 
   return (
     <div className="px-4 pt-4 pb-32">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold">Repas</h2>
+        <h2 className="text-lg font-bold">Repas 🍽️</h2>
         {view === "nutrition" && (
           <div className="flex gap-2">
-            <button onClick={() => setShowPoids(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}><Icon name="scale" size={18} /></button>
-            <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}><Icon name="settings" size={18} /></button>
+            <button onClick={() => setShowPoids(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚖️</button>
+            <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-xl flex items-center justify-center text-base" style={{ background: "var(--input-bg)" }}>⚙️</button>
           </div>
         )}
       </div>
@@ -2216,11 +2163,11 @@ function FocusRepasTab({ spaceId, user }) {
       <div className="flex mb-4 p-1 rounded-xl" style={{ background: "var(--input-bg)" }}>
         <button onClick={() => setView("nutrition")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
           style={{ background: view === "nutrition" ? "var(--card)" : "transparent", color: view === "nutrition" ? "var(--text)" : "var(--secondary)" }}>
-          <Icon name="leaf" size={14} style={{ marginRight: 4 }} /> Nutrition
+          🥗 Nutrition
         </button>
         <button onClick={() => setView("planning")} className="flex-1 py-2 text-sm font-semibold rounded-lg transition-all"
           style={{ background: view === "planning" ? "var(--card)" : "transparent", color: view === "planning" ? "var(--text)" : "var(--secondary)" }}>
-          <Icon name="calendar" size={14} style={{ marginRight: 4 }} /> Planning
+          📅 Planning
         </button>
       </div>
 
@@ -2290,7 +2237,7 @@ function FocusRepasTab({ spaceId, user }) {
       <div className="card p-4 mb-3">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-xs font-semibold mb-1" style={{ color: "var(--secondary)" }}>POIDS</div>
+            <div className="text-xs font-semibold mb-1" style={{ color: "var(--secondary)" }}>⚖️ POIDS</div>
             <div className="text-xl font-bold">{dernierPoids ? `${dernierPoids.poids} kg` : "—"}</div>
             {poids && <div className="text-xs mt-0.5" style={{ color: "var(--secondary)" }}>Départ: {poids} kg</div>}
           </div>
@@ -2340,7 +2287,7 @@ function FocusRepasTab({ spaceId, user }) {
         </div>
         {activeDay !== today && (
           <div className="mt-2 text-xs text-center py-1 rounded-lg" style={{ background: "rgba(192,132,252,0.15)", color: "#c084fc" }}>
-            <Icon name="calendar" size={14} style={{ marginRight: 4 }} /> Vue du {activeDay} · <span className="underline cursor-pointer" onClick={() => setActiveDay(today)}>Retour à aujourd'hui</span>
+            📅 Vue du {activeDay} · <span className="underline cursor-pointer" onClick={() => setActiveDay(today)}>Retour à aujourd'hui</span>
           </div>
         )}
       </div>
@@ -2411,20 +2358,20 @@ function FocusRepasSettings({ objectif, poids, activite, objectifs, onClose, onS
   const [a, setA] = useState(activite);
   const preview = calcNutriObjectifs(p, a, o);
 
-  const OBJ = [{ id:"masse", icon:"trending-up", label:"Prise de masse" }, { id:"perte", icon:"fire", label:"Perte de poids" }, { id:"maintien", icon:"scale", label:"Maintien" }];
+  const OBJ = [{ id:"masse", label:"💪 Prise de masse" }, { id:"perte", label:"🔥 Perte de poids" }, { id:"maintien", label:"⚖️ Maintien" }];
   const ACT = [{ id:"sedentaire", label:"🪑 Sédentaire" }, { id:"modere", label:"🚶 Modéré" }, { id:"actif", label:"🏃 Actif" }, { id:"tres-actif", label:"🏋️ Très actif" }];
 
   return (
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl overflow-y-auto p-6" style={{ background: "var(--card)", maxHeight: "90vh", paddingBottom: "32px" }} onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Icon name="settings" size={20} /> Objectif nutritionnel</h3>
+        <h3 className="text-lg font-bold mb-4">⚙️ Objectif nutritionnel</h3>
         <div className="mb-4">
           <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--secondary)" }}>MON OBJECTIF</label>
           <div className="flex flex-col gap-2">
             {OBJ.map(opt => (
               <button key={opt.id} onClick={() => setO(opt.id)} className="py-3 rounded-xl font-semibold text-sm text-left px-4 transition-all"
                 style={{ background: o === opt.id ? "rgba(192,132,252,0.18)" : "var(--input-bg)", color: o === opt.id ? "#c084fc" : "var(--text)", border: o === opt.id ? "1px solid rgba(192,132,252,0.4)" : "1px solid transparent" }}>
-                <Icon name={opt.icon} size={16} style={{ marginRight: 6 }} />{opt.label}
+                {opt.label}
               </button>
             ))}
           </div>
@@ -2524,7 +2471,7 @@ function FocusPoidsModal({ current, onClose, onSave }) {
   return (
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl p-6 pb-10" style={{ background: "var(--card)" }} onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-bold mb-4"><Icon name="scale" size={20} style={{ marginRight: 6 }} /> Peser aujourd'hui</h3>
+        <h3 className="text-lg font-bold mb-4">⚖️ Peser aujourd'hui</h3>
         <input className="input w-full mb-2" type="number" step="0.1" placeholder="Poids en kg (ex: 76.5)" value={p} onChange={e => setP(e.target.value)} />
         <p className="text-xs mb-5" style={{ color: "var(--secondary)" }}>À faire le matin, à jeun, pour plus de précision.</p>
         <button onClick={() => { if (p) onSave(p); }} disabled={!p} className="gradient-bg text-white font-semibold w-full py-4 rounded-xl disabled:opacity-40 text-base">
@@ -2570,7 +2517,7 @@ function RepasTab({ spaceId, user, members }) {
   return (
     <div className="px-4 pt-4 pb-32">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold">Repas</h2>
+        <h2 className="text-lg font-bold">Repas 🍽️</h2>
       </div>
 
       <div className="overflow-x-auto -mx-4 px-4">
@@ -2629,7 +2576,7 @@ function RepasModal({ slot, existing, onClose, onSave, onDelete }) {
   return (
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 400, background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full max-w-md rounded-t-3xl p-6" style={{ background: "var(--card)", maxHeight: "85vh", overflowY: "auto", paddingBottom: "90px" }} onClick={e => e.stopPropagation()}>
-        <h3 className="text-lg font-bold mb-1">{slot.jour} — {slot.moment}</h3>
+        <h3 className="text-lg font-bold mb-1">{slot.jour} — {slot.moment} 🍽️</h3>
         <p className="text-sm mb-4" style={{ color: "var(--secondary)" }}>{existing ? "Modifier le repas" : "Ajouter un repas"}</p>
         <input className="input w-full mb-3" placeholder="Plat (ex: Pâtes bolognaise)" value={plat} onChange={e => setPlat(e.target.value)} />
         <textarea className="input w-full mb-5 resize-none" rows={2} placeholder="Notes, recette… (optionnel)" value={notes} onChange={e => setNotes(e.target.value)} />
@@ -2686,7 +2633,7 @@ function TachesTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Tâches</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Tâches ✅</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
           {items.filter(i => !i.done).length} tâche{items.filter(i => !i.done).length !== 1 ? "s" : ""} en cours
         </p>
@@ -2701,7 +2648,7 @@ function TachesTab({ spaceId, user, members }) {
           <span className="text-xl">+</span> Ajouter une tâche
         </button>
         {filtered.length === 0
-          ? <EmptyState icon="check-circle" text="Aucune tâche ici !" />
+          ? <EmptyState emoji="✅" text="Aucune tâche ici !" />
           : filtered.map(item => {
               const ps = priorityStyle(item.priority);
               return (
@@ -2734,7 +2681,7 @@ function TachesTab({ spaceId, user, members }) {
         }
       </div>
       {modal && (
-        <AddModal title="Nouvelle tâche"
+        <AddModal title="Nouvelle tâche ✅"
           fields={[
             { key: "title",    label: "Titre",    required: true, placeholder: "Que faut-il faire ?" },
             { key: "desc",     label: "Détails",  type: "textarea" },
@@ -2789,7 +2736,7 @@ function ProjetsTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Projets</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Projets 📁</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
           {items.filter(i => i.status === "actif").length} projet{items.filter(i => i.status === "actif").length !== 1 ? "s" : ""} actif{items.filter(i => i.status === "actif").length !== 1 ? "s" : ""}
         </p>
@@ -2799,7 +2746,7 @@ function ProjetsTab({ spaceId, user, members }) {
           <span className="text-xl">+</span> Nouveau projet
         </button>
         {items.length === 0
-          ? <EmptyState icon="folder" text="Aucun projet pour l'instant" />
+          ? <EmptyState emoji="📁" text="Aucun projet pour l'instant" />
           : items.map(item => {
               const ss = statusStyle(item.status);
               return (
@@ -2828,7 +2775,7 @@ function ProjetsTab({ spaceId, user, members }) {
         }
       </div>
       {modal && (
-        <AddModal title="Nouveau projet"
+        <AddModal title="Nouveau projet 📁"
           fields={[
             { key: "title", label: "Nom du projet", required: true },
             { key: "desc",  label: "Description",   type: "textarea" },
@@ -2874,7 +2821,7 @@ function NotesTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Notes</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Notes 💬</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} note{items.length !== 1 ? "s" : ""}</p>
       </div>
       <div className="p-4">
@@ -2882,7 +2829,7 @@ function NotesTab({ spaceId, user, members }) {
           <span className="text-xl">+</span> Nouvelle note
         </button>
         {items.length === 0
-          ? <EmptyState icon="message" text="Aucune note partagée" />
+          ? <EmptyState emoji="💬" text="Aucune note partagée" />
           : items.map(item => (
             <div key={item.id} className="card p-4 mb-3">
               <div className="flex items-start justify-between gap-2">
@@ -2905,7 +2852,7 @@ function NotesTab({ spaceId, user, members }) {
         }
       </div>
       {modal && (
-        <AddModal title="Nouvelle note"
+        <AddModal title="Nouvelle note 💬"
           fields={[
             { key: "title",   label: "Titre",   required: true },
             { key: "content", label: "Contenu", type: "textarea" },
@@ -2956,7 +2903,7 @@ function LiensTab({ spaceId, user, members }) {
   return (
     <div className="pb-24">
       <div className="gradient-bg p-6">
-        <h2 className="text-white font-bold text-xl mb-1">Liens</h2>
+        <h2 className="text-white font-bold text-xl mb-1">Liens 🔗</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} ressource{items.length !== 1 ? "s" : ""}</p>
       </div>
       <div className="p-4">
@@ -2964,7 +2911,7 @@ function LiensTab({ spaceId, user, members }) {
           <span className="text-xl">+</span> Ajouter un lien
         </button>
         {items.length === 0
-          ? <EmptyState icon="link" text="Aucun lien partagé" />
+          ? <EmptyState emoji="🔗" text="Aucun lien partagé" />
           : items.map(item => (
             <div key={item.id} className="card p-4 mb-3">
               <div className="flex items-start justify-between gap-2">
@@ -2993,7 +2940,7 @@ function LiensTab({ spaceId, user, members }) {
         }
       </div>
       {modal && (
-        <AddModal title="Nouveau lien"
+        <AddModal title="Nouveau lien 🔗"
           fields={[
             { key: "title", label: "Titre",       required: true, placeholder: "Ex: Figma du projet" },
             { key: "url",   label: "URL",          placeholder: "https://…" },
@@ -3113,7 +3060,7 @@ function ChatTab({ spaceId, user, userData, members }) {
       <div style={{ flex:1, overflowY:"auto", padding:"12px 16px" }}>
         {messages.length === 0 && (
           <div style={{ textAlign:"center", padding:"56px 16px" }}>
-            <div style={{ marginBottom:"8px", display:"flex", justifyContent:"center" }}><Icon name="message" size={40} /></div>
+            <div style={{ fontSize:"2.5rem", marginBottom:"8px" }}>💬</div>
             <p style={{ color:"var(--secondary)", fontSize:"0.9rem", lineHeight:"1.6" }}>
               Pas encore de messages.<br/>Soyez les premiers à écrire !
             </p>
@@ -3380,7 +3327,7 @@ function FocusScreen({ spaceId, user }) {
   const totalHabits     = habits.length;
   const pct             = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
   const pctColor        = pct >= 80 ? "#4ade80" : pct >= 50 ? "#fb923c" : "#f87171";
-  const moodData        = pct >= 80 ? { icon: "fire", text: "En feu !" } : pct >= 50 ? { icon: "trending-up", text: "Continue !" } : totalHabits > 0 ? { icon: "bolt", text: "C'est parti !" } : null;
+  const mood            = pct >= 80 ? "🔥 En feu !" : pct >= 50 ? "💪 Continue !" : totalHabits > 0 ? "⚡ C'est parti !" : "";
 
   const toggleHabit = async (habitId) => {
     const docRef = db.collection(`spaces/${spaceId}/focusDays`).doc(todayStr);
@@ -3462,7 +3409,7 @@ function FocusScreen({ spaceId, user }) {
           </p>
         </div>
         <div className="text-right">
-          {moodData && <p className="text-sm font-semibold mb-1 flex items-center gap-1" style={{ color: "var(--accent)" }}><Icon name={moodData.icon} size={16} /> {moodData.text}</p>}
+          {mood && <p className="text-sm font-semibold mb-1" style={{ color: "var(--accent)" }}>{mood}</p>}
           <p className="text-xs" style={{ color: "var(--inactive)" }}>
             {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </p>
@@ -3514,7 +3461,7 @@ function FocusScreen({ spaceId, user }) {
                   </p>
                   {h.streak > 0 && (
                     <p className="text-xs mt-0.5" style={{ color: "var(--accent)" }}>
-                      <Icon name="fire-filled" size={12} color="#f97316" /> {h.streak} jour{h.streak > 1 ? "s" : ""}
+                      🔥 {h.streak} jour{h.streak > 1 ? "s" : ""}
                     </p>
                   )}
                 </div>
@@ -3713,7 +3660,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowSettings(true)} className="text-white/70 px-2 py-1 rounded-full text-base"
-            style={{ background: "rgba(0,0,0,0.25)" }}><Icon name="settings" size={18} /></button>
+            style={{ background: "rgba(0,0,0,0.25)" }}>⚙️</button>
           <button onClick={() => setShowInfo(true)} className="text-white/70 px-2.5 py-1 rounded-full text-sm font-bold"
             style={{ background: "rgba(0,0,0,0.25)" }}>⋯</button>
         </div>
@@ -3753,7 +3700,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
             <div className="flex">
               {spaceModules.map(tab => (
                 <button key={tab.id} onClick={() => navigateTo(tab.id)} className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
-                  <Icon name={tab.icon} size={22} />
+                  <span className="text-xl">{tab.emoji}</span>
                   <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
                   {activeTab === tab.id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />}
                 </button>
@@ -3772,7 +3719,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                       <button key={tab.id} onClick={() => navigateTo(tab.id)}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl"
                         style={{ background: activeTab === tab.id ? "var(--input-bg)" : "transparent" }}>
-                        <Icon name={tab.icon} size={22} />
+                        <span className="text-xl">{tab.emoji}</span>
                         <span className="font-medium text-sm" style={{ color: "var(--text)" }}>{tab.label}</span>
                         {activeTab === tab.id && <span className="ml-auto w-2 h-2 rounded-full" style={{ background: "var(--accent)" }} />}
                       </button>
@@ -3787,7 +3734,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                   return tab ? (
                     <button onClick={() => navigateTo(tab.id)}
                       className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
-                      <Icon name={tab.icon} size={22} />
+                      <span className="text-xl">{tab.emoji}</span>
                       <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
                       {activeTab === tab.id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />}
                     </button>
@@ -3807,7 +3754,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                   return tab ? (
                     <button onClick={() => navigateTo(tab.id)}
                       className={`flex-1 flex flex-col items-center py-2 tab-btn ${activeTab === tab.id ? "active" : ""}`}>
-                      <Icon name={tab.icon} size={22} />
+                      <span className="text-xl">{tab.emoji}</span>
                       <span className="text-xs mt-0.5 font-medium">{tab.label}</span>
                       {activeTab === tab.id && <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: "var(--accent)" }} />}
                     </button>
@@ -3860,14 +3807,14 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                   {spaceModules.map(m => (
                     <span key={m.id} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
                       style={{ background: "var(--input-bg)", border: "1px solid var(--border)", color: "var(--text)" }}>
-                      <Icon name={m.icon} size={14} /> {m.label}
+                      {m.emoji} {m.label}
                     </span>
                   ))}
                 </div>
                 <button onClick={() => { setEditModules(liveSpace?.modules || TABS.map(t=>t.id)); setShowModules(true); setShowInfo(false); }}
                   className="w-full py-2.5 rounded-xl text-sm font-semibold"
                   style={{ background: "var(--input-bg)", color: "var(--accent)", border: "1px solid var(--accent)", opacity: 0.9 }}>
-                  <Icon name="settings" size={16} style={{ marginRight: 4 }} /> Gérer les modules
+                  ⚙️ Gérer les modules
                 </button>
               </div>
             )}
@@ -3918,7 +3865,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
                       background: active ? "rgba(244,114,182,0.1)" : "var(--input-bg)",
                       border: `2px solid ${active ? "var(--accent)" : "var(--border)"}`,
                     }}>
-                    <Icon name={m.icon} size={24} />
+                    <span className="text-2xl">{m.emoji}</span>
                     <div className="flex-1">
                       <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>{m.label}</p>
                       <p className="text-xs" style={{ color: "var(--secondary)" }}>{m.desc}</p>
