@@ -587,11 +587,16 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
   const [err, setErr]                 = useState("");
   const [busy, setBusy]               = useState(false);
 
+  const [dbErr, setDbErr] = useState(null);
+
   useEffect(() => {
     if (!user) return;
     const unsub = db.collection("spaces")
       .where("memberIds", "array-contains", user.uid)
-      .onSnapshot(snap => setSpaces(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+      .onSnapshot(
+        snap => { setSpaces(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setDbErr(null); },
+        err => setDbErr("Spaces: " + err.code + " " + err.message)
+      );
     return unsub;
   }, [user]);
 
@@ -644,6 +649,14 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
 
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
+      {/* Debug temporaire */}
+      <div style={{ background: "#1a1a2e", border: "1px solid #e94560", borderRadius: 8, padding: 10, marginBottom: 10, fontSize: "0.7rem", color: "#eee", wordBreak: "break-all" }}>
+        <b style={{ color: "#e94560" }}>DEBUG (temporaire)</b><br/>
+        Auth: {user ? "OK" : "NON"} | UID: {user?.uid?.slice(0,8)}...<br/>
+        UserData: {userData ? "OK (" + userData.name + ")" : "NULL"}<br/>
+        Spaces: {spaces.length} trouvé(s)<br/>
+        {dbErr && <span style={{ color: "#f87171" }}>Erreur: {dbErr}</span>}
+      </div>
       {/* Header */}
       <div className="gradient-bg rounded-2xl px-5 pt-5 pb-4 mb-5 flex items-start justify-between">
         <div>
