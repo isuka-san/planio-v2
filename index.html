@@ -35,7 +35,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
     .gradient-bg { background: linear-gradient(135deg, var(--grad1), var(--grad2)); }
-    .card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08); transition: box-shadow 0.2s; }
+    .card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav-bg); border-top: 1px solid var(--border); padding: 6px 0 env(safe-area-inset-bottom); z-index: 100; box-shadow: 0 -4px 24px rgba(0,0,0,0.3); }
     .tab-btn { transition: all 0.2s; color: var(--inactive); }
     .tab-btn.active { color: var(--accent); }
@@ -117,19 +117,19 @@ function Avatar(props) {
   var hash = 0;
   for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   var palettes = [
-    ["#4a6fa5","#6b8fc4"],["#6b7b8d","#8a9bae"],["#7c6d8e","#9b8cb0"],
-    ["#5a8a7a","#7aaa9a"],["#8a7060","#aa9080"],["#5a7a6a","#7a9a8a"],
-    ["#6a6a8a","#8a8aaa"],["#7a6a6a","#9a8a8a"],["#5a7a8a","#7a9aaa"],
-    ["#6a8a6a","#8aaa8a"],["#7a6a7a","#9a8a9a"],["#5a6a7a","#7a8a9a"],
+    ["#6C5CE7","#A29BFE"],["#00B894","#55E6C1"],["#E84393","#FD79A8"],
+    ["#0984E3","#74B9FF"],["#F39C12","#FDCB6E"],["#D63031","#FF7675"],
+    ["#00CEC9","#81ECEC"],["#E17055","#FAB1A0"],["#8B5CF6","#C4B5FD"],
+    ["#20BF6B","#A0E7E5"],["#2D3436","#636E72"],["#E44D26","#F16529"],
   ];
   var pair = palettes[Math.abs(hash) % palettes.length];
   var initial = name.charAt(0).toUpperCase();
   return React.createElement('div', {
     style: {
-      width: size, height: size, borderRadius: size > 28 ? '12px' : '8px',
-      background: 'linear-gradient(145deg, ' + pair[0] + ', ' + pair[1] + ')',
+      width: size, height: size, borderRadius: '50%',
+      background: 'linear-gradient(135deg, ' + pair[0] + ', ' + pair[1] + ')',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: Math.round(size * 0.4),
+      color: 'white', fontWeight: 700, fontSize: Math.round(size * 0.42),
       flexShrink: 0, userSelect: 'none', letterSpacing: '-0.02em',
     }
   }, initial);
@@ -368,9 +368,9 @@ function UserBadge({ uid, members }) {
   const m   = (members || [])[idx];
   if (!m) return null;
   return (
-    <span className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <Avatar name={m.name} size={14} />
-      <span style={{ color: "var(--inactive)" }}>{m.name?.split(' ')[0]}</span>
+    <span className="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+      <Avatar name={m.name} size={16} />
+      <span style={{ color: "var(--secondary)" }}>{m.name?.split(' ')[0]}</span>
     </span>
   );
 }
@@ -667,25 +667,24 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 pt-2">
-        <div className="flex items-center gap-3">
-          <Avatar name={userData?.name || user.displayName || "?"} size={40} />
-          <div>
-            <p className="text-xs font-medium" style={{ color: "var(--inactive)" }}>Bienvenue</p>
-            <h1 className="font-bold text-lg" style={{ color: "var(--text)" }}>{userData?.name || user.displayName || "Planio"}</h1>
-          </div>
+      <div className="gradient-bg rounded-2xl px-5 pt-5 pb-4 mb-5 flex items-start justify-between">
+        <div>
+          <h1 className="text-white font-bold text-2xl">Planio</h1>
+          <p className="text-white/70 text-sm mt-0.5">
+            <Avatar name={userData?.name || user.displayName || "?"} size={22} /> {userData?.name || user.displayName || "Bienvenue"}
+          </p>
         </div>
-        <button onClick={() => setShowSettings(true)} className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
-          <Icon name="settings" size={18} />
+        <button onClick={() => setShowSettings(true)} className="text-xl text-white/70 px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>
+          <Icon name="settings" size={20} />
         </button>
       </div>
 
       {/* Actions */}
       <div className="flex gap-3 mb-5">
-        <button onClick={() => setShowCreate(true)} className="flex-1 gradient-bg text-white font-semibold py-3.5 rounded-xl text-sm" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }}>
-          Créer un espace
+        <button onClick={() => setShowCreate(true)} className="flex-1 gradient-bg text-white font-semibold py-3 rounded-xl text-sm">
+          + Créer un espace
         </button>
-        <button onClick={() => { setShowJoin(true); setErr(""); }} className="flex-1 font-semibold py-3.5 rounded-xl text-sm" style={{ background: "var(--input-bg)", border: "1px solid var(--border)", color: "var(--text)" }}>
+        <button onClick={() => { setShowJoin(true); setErr(""); }} className="flex-1 text-white font-semibold py-3 rounded-xl text-sm" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
           Rejoindre
         </button>
       </div>
@@ -696,20 +695,17 @@ function HomeScreen({ user, userData, onEnterSpace, currentThemeId, onThemeChang
       ) : (
         <div className="flex flex-col gap-3">
           {spaces.map(s => (
-            <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--grad1), var(--grad2))", opacity: 0.9 }}>
-                <Icon name={SPACE_MODES.find(m => m.id === s.mode)?.icon || "users"} size={20} color="white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm">{s.name}</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div className="flex items-center" style={{ marginLeft: 0 }}>
-                    {(s.members || []).slice(0, 4).map((m,i) => <div key={i} style={{ marginLeft: i > 0 ? -6 : 0, position: "relative", zIndex: 4 - i }}><Avatar name={m.name} size={18} /></div>)}
-                  </div>
-                  <span className="text-xs" style={{ color: "var(--inactive)" }}>{(s.memberIds || []).length} membre{(s.memberIds || []).length > 1 ? "s" : ""}</span>
+            <button key={s.id} onClick={() => onEnterSpace(s)} className="card w-full p-4 text-left flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Icon name={SPACE_MODES.find(m => m.id === s.mode)?.icon || "users"} size={24} />
+                <div>
+                  <p className="font-semibold">{s.name}</p>
+                  <p className="text-sm mt-0.5" style={{ color: "var(--inactive)" }}>
+                    {(s.members || []).map((m,i) => <Avatar key={i} name={m.name} size={18} />)} · {(s.memberIds || []).length} membre{(s.memberIds || []).length > 1 ? "s" : ""}
+                  </p>
                 </div>
               </div>
-              <Icon name="check" size={16} color="var(--inactive)" style={{ transform: "rotate(-90deg)" }} />
+              <span className="text-xl" style={{ color: "var(--inactive)" }}>›</span>
             </button>
           ))}
         </div>
@@ -1015,10 +1011,10 @@ function ActivitesTab({ spaceId, user, members }) {
                     style={item.done ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                     {item.done ? "✓" : "○"}
                   </button>
-                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-lg flex items-center justify-center text-xs"
-                    style={{ background: "rgba(255,255,255,0.04)", color: "var(--inactive)" }}>✎</button>
+                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
               </div>
               {item.done && (() => {
@@ -1519,10 +1515,10 @@ function MusiqueTab({ spaceId, user, members }) {
                     style={{ background: m.liked ? "#3d1830" : "var(--input-bg)", fontSize: "1rem" }}>
                     {m.liked ? <Icon name="heart-filled" size={18} color="#f87171" /> : <Icon name="heart" size={18} />}
                   </button>
-                  <button onClick={() => setEditItem(m)} className="w-8 h-8 rounded-lg flex items-center justify-center text-xs"
-                    style={{ background: "rgba(255,255,255,0.04)", color: "var(--inactive)" }}>✎</button>
+                  <button onClick={() => setEditItem(m)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(m.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
               </div>
             </div>
@@ -1622,10 +1618,10 @@ function JeuxTab({ spaceId, user, members }) {
                     style={jeu.played ? { background: "#1a3a2a", color: "#4ade80" } : { background: "var(--input-bg)", color: "var(--inactive)" }}>
                     {jeu.played ? "✓" : "○"}
                   </button>
-                  <button onClick={() => setEditItem(jeu)} className="w-8 h-8 rounded-lg flex items-center justify-center text-xs"
-                    style={{ background: "rgba(255,255,255,0.04)", color: "var(--inactive)" }}>✎</button>
+                  <button onClick={() => setEditItem(jeu)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(jeu.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
               </div>
             </div>
@@ -1722,7 +1718,7 @@ function IdeesTab({ spaceId, user, members }) {
                 <button onClick={() => setEditItem(idee)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                   style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                 <button onClick={() => del(idee.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                  style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
               </div>
             </div>
           </div>
@@ -2751,7 +2747,7 @@ function TachesTab({ spaceId, user, members }) {
                       <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                         style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                       <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                        style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                        style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                     </div>
                   </div>
                 </div>
@@ -2845,7 +2841,7 @@ function ProjetsTab({ spaceId, user, members }) {
                       <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
                         style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                       <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                        style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                        style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                     </div>
                   </div>
                 </div>
@@ -2920,10 +2916,10 @@ function NotesTab({ spaceId, user, members }) {
                   {item.content && <p className="text-sm whitespace-pre-wrap" style={{ color: "var(--secondary)" }}>{item.content}</p>}
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-lg flex items-center justify-center text-xs"
-                    style={{ background: "rgba(255,255,255,0.04)", color: "var(--inactive)" }}>✎</button>
+                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
               </div>
             </div>
@@ -3008,10 +3004,10 @@ function LiensTab({ spaceId, user, members }) {
                   {item.desc && <p className="text-xs" style={{ color: "var(--secondary)" }}>{item.desc}</p>}
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-lg flex items-center justify-center text-xs"
-                    style={{ background: "rgba(255,255,255,0.04)", color: "var(--inactive)" }}>✎</button>
+                  <button onClick={() => setEditItem(item)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                    style={{ background: "var(--input-bg)", color: "var(--secondary)" }}>✎</button>
                   <button onClick={() => del(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                    style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
                 </div>
               </div>
             </div>
@@ -3543,7 +3539,7 @@ function FocusScreen({ spaceId, user }) {
                 </div>
                 <button onClick={() => deleteHabit(h.id)}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0"
-                  style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                  style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
               </div>
             );
           })}
@@ -3592,7 +3588,7 @@ function FocusScreen({ spaceId, user }) {
               </p>
               <button onClick={() => deleteTask(t.id)}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0"
-                style={{ background: "rgba(239,68,68,0.08)", color: "rgba(248,113,113,0.7)" }}>✕</button>
+                style={{ background: "#2d1520", color: "#f87171" }}>✕</button>
             </div>
           ))}
         </div>
@@ -3723,16 +3719,14 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
   return (
     <div className="max-w-md mx-auto min-h-screen">
       {/* Header sticky */}
-      <div className="px-4 pt-4 pb-3 flex items-center justify-between sticky top-0 z-50" style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
+      <div className="gradient-bg px-4 pt-4 pb-2 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="flex items-center justify-center w-9 h-9 rounded-xl" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
-            <Icon name="check" size={16} style={{ transform: "rotate(90deg)" }} />
-          </button>
+          <button onClick={onBack} className="flex items-center justify-center text-white font-bold text-2xl w-9 h-9 rounded-full" style={{ background: "rgba(0,0,0,0.25)" }}>‹</button>
           <div>
-            <h1 className="font-bold text-base leading-tight" style={{ color: "var(--text)" }}>{liveSpace?.name}</h1>
-            <div className="flex items-center gap-1 mt-0.5">
-              {members.slice(0, 3).map(m => <Avatar key={m.uid} name={m.name} size={16} />)}
-              <span className="text-xs ml-0.5" style={{ color: "var(--inactive)" }}>{members.length}</span>
+            <h1 className="text-white font-bold text-base leading-tight">{liveSpace?.name}</h1>
+            <div className="flex items-center gap-1">
+              {members.map(m => <Avatar key={m.uid} name={m.name} size={20} />)}
+              <span className="text-white/60 text-xs ml-1">{members.length} membre{members.length > 1 ? "s" : ""}</span>
             </div>
           </div>
         </div>
