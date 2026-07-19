@@ -972,7 +972,7 @@ function ActivitesTab({ spaceId, user, members }) {
   };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6 pb-4">
         <h2 className="text-white font-bold text-xl mb-4">Plans</h2>
         <div className="flex rounded-xl p-1 gap-1" style={{ background: "rgba(0,0,0,0.2)" }}>
@@ -1184,7 +1184,7 @@ function FilmsTab({ spaceId, user, members }) {
   const inProgress = items.filter(i => !i.completed && getProgress(i) > 0).length;
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Films & Séries</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -1483,7 +1483,7 @@ function MusiqueTab({ spaceId, user, members }) {
   };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Musique</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -1579,7 +1579,7 @@ function JeuxTab({ spaceId, user, members }) {
   const filtered = filter === "all" ? jeux : filter === "played" ? jeux.filter(j => j.played) : jeux.filter(j => !j.played);
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Jeux</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -2705,7 +2705,7 @@ function TachesTab({ spaceId, user, members }) {
   const priorityStyle = (p) => p === "urgent" ? { bg: "#3d1515", color: "#f87171" } : p === "bas" ? { bg: "#0b2e26", color: "#5eead4" } : { bg: "#2d1a0b", color: "#fcd34d" };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Tâches</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -2808,7 +2808,7 @@ function ProjetsTab({ spaceId, user, members }) {
   const statusStyle = (s) => s === "terminé" ? { bg: "#1a3a2a", color: "#4ade80" } : s === "pause" ? { bg: "#2d1a0b", color: "#fcd34d" } : { bg: "#1a2e40", color: "#60a5fa" };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Projets</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
@@ -2893,7 +2893,7 @@ function NotesTab({ spaceId, user, members }) {
   };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Notes</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} note{items.length !== 1 ? "s" : ""}</p>
@@ -2975,7 +2975,7 @@ function LiensTab({ spaceId, user, members }) {
   };
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       <div className="gradient-bg p-6">
         <h2 className="text-white font-bold text-xl mb-1">Liens</h2>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>{items.length} ressource{items.length !== 1 ? "s" : ""}</p>
