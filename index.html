@@ -289,6 +289,7 @@ const SOCIAL_MODULES = [
   { id: "jeux",      label: "Jeux",      icon: "gamepad",  desc: "Bibliothèque de jeux" },
   { id: "depenses",  label: "Dépenses",  icon: "wallet",   desc: "Partage des dépenses communes" },
   { id: "repas",     label: "Repas",     icon: "utensils",  desc: "Planning repas et recettes" },
+  { id: "calendrier", label: "Agenda",  icon: "calendar",  desc: "Disponibilités et planning partagé" },
 ];
 
 const FOCUS_MODULES = [
@@ -3631,6 +3632,220 @@ function FocusScreen({ spaceId, user }) {
 }
 
 // ================================================================
+//  CALENDRIER — disponibilités partagées via Google Calendar
+// ================================================================
+const GCAL_CLIENT_ID = ""; // ← Remplacer par ton Client ID Google
+const GCAL_SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+
+function CalendrierTab({ spaceId, user, members }) {
+  const [gAuth, setGAuth] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [memberAvail, setMemberAvail] = useState({});
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const path = spaceId ? `spaces/${spaceId}/calendars` : null;
+  const savedCalendars = useCollection(path);
+
+  const getWeekDays = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay() + 1 + offset * 7);
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(d);
+      day.setDate(d.getDate() + i);
+      return day;
+    });
+  };
+  const days = getWeekDays(weekOffset);
+  const dayLabels = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const hours = Array.from({ length: 14 }, (_, i) => i + 7);
+
+  const initGoogle = async () => {
+    if (!GCAL_CLIENT_ID) { alert("Client ID Google non configuré. Contacte l'admin."); return; }
+    if (!window.google?.accounts) {
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.onload = () => initGoogle();
+      document.head.appendChild(s);
+      return;
+    }
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: GCAL_CLIENT_ID,
+      scope: GCAL_SCOPES,
+      callback: async (resp) => {
+        if (resp.error) return;
+        setGAuth(resp.access_token);
+        setConnected(true);
+        await fetchEvents(resp.access_token);
+        await db.collection(path).doc(user.uid).set({
+          connected: true, name: user.displayName || "Moi",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    });
+    client.requestAccessToken();
+  };
+
+  const fetchEvents = async (token) => {
+    if (!token) return;
+    setLoading(true);
+    const start = days[0].toISOString();
+    const end = new Date(days[6]);
+    end.setHours(23, 59, 59);
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      const evts = (data.items || []).map(e => ({
+        title: "Occupé",
+        start: new Date(e.start.dateTime || e.start.date),
+        end: new Date(e.end.dateTime || e.end.date),
+      }));
+      setEvents(evts);
+      if (path) {
+        await db.collection(path).doc(user.uid).set({
+          slots: evts.map(e => ({ start: e.start.getTime(), end: e.end.getTime() })),
+          weekStart: days[0].getTime(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    } catch (e) { console.error("Erreur Google Calendar:", e); }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (gAuth && days.length) fetchEvents(gAuth);
+  }, [weekOffset]);
+
+  useEffect(() => {
+    if (!savedCalendars.length) return;
+    const avail = {};
+    const weekStart = days[0].getTime();
+    savedCalendars.forEach(cal => {
+      if (cal.weekStart === weekStart && cal.slots) {
+        avail[cal.id] = cal.slots.map(s => ({ start: new Date(s.start), end: new Date(s.end) }));
+      }
+    });
+    setMemberAvail(avail);
+  }, [savedCalendars, weekOffset]);
+
+  const isSlotBusy = (slots, day, hour) => {
+    if (!slots) return false;
+    const t = new Date(day); t.setHours(hour, 0, 0, 0);
+    const tEnd = new Date(day); tEnd.setHours(hour + 1, 0, 0, 0);
+    return slots.some(s => s.start < tEnd && s.end > t);
+  };
+
+  return (
+    <div className="pb-32">
+      <div className="gradient-bg p-6 pb-4">
+        <h2 className="text-white font-bold text-xl mb-2">Agenda</h2>
+        <div className="flex items-center justify-between">
+          <button onClick={() => setWeekOffset(w => w - 1)} className="text-white/70 px-3 py-1 rounded-lg" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <Icon name="check" size={14} color="white" style={{ transform: "rotate(90deg)" }} />
+          </button>
+          <span className="text-white/80 text-sm font-medium">
+            {days[0].toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} - {days[6].toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+          </span>
+          <button onClick={() => setWeekOffset(w => w + 1)} className="text-white/70 px-3 py-1 rounded-lg" style={{ background: "rgba(0,0,0,0.2)" }}>
+            <Icon name="check" size={14} color="white" style={{ transform: "rotate(-90deg)" }} />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4">
+        {!connected && (
+          <button onClick={initGoogle} className="w-full gradient-bg text-white font-semibold py-3 rounded-xl mb-4 flex items-center justify-center gap-2">
+            <Icon name="calendar" size={18} color="white" /> Connecter Google Calendar
+          </button>
+        )}
+        {connected && (
+          <div className="flex items-center gap-2 mb-4 p-3 rounded-xl" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: "#4ade80" }} />
+            <span className="text-sm" style={{ color: "var(--secondary)" }}>Google Calendar connecté</span>
+            <button onClick={() => fetchEvents(gAuth)} className="ml-auto text-xs px-2 py-1 rounded-lg" style={{ background: "var(--input-bg)", color: "var(--accent)" }}>
+              {loading ? "..." : "Sync"}
+            </button>
+          </div>
+        )}
+
+        {/* Légende membres */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {members.map(m => {
+            const hasCal = savedCalendars.some(c => c.id === m.uid);
+            return (
+              <div key={m.uid} className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs" style={{ background: "var(--input-bg)", border: "1px solid var(--border)" }}>
+                <Avatar name={m.name} size={16} />
+                <span style={{ color: hasCal ? "var(--text)" : "var(--inactive)" }}>{m.name?.split(' ')[0]}</span>
+                {hasCal && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#4ade80" }} />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Grille semaine */}
+        <div className="card overflow-hidden">
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: "8px 4px", color: "var(--inactive)", fontWeight: 500, width: 40 }}></th>
+                  {days.map((d, i) => {
+                    const isToday = d.toDateString() === new Date().toDateString();
+                    return (
+                      <th key={i} style={{ padding: "8px 2px", color: isToday ? "var(--accent)" : "var(--secondary)", fontWeight: isToday ? 700 : 500, textAlign: "center" }}>
+                        <div>{dayLabels[i]}</div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{d.getDate()}</div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {hours.map(h => (
+                  <tr key={h}>
+                    <td style={{ padding: "2px 4px", color: "var(--inactive)", textAlign: "right", verticalAlign: "top", fontWeight: 500 }}>{h}h</td>
+                    {days.map((d, di) => {
+                      const busyMembers = members.filter(m => isSlotBusy(memberAvail[m.uid], d, h));
+                      const myBusy = events.some(e => {
+                        const t = new Date(d); t.setHours(h, 0, 0, 0);
+                        const tEnd = new Date(d); tEnd.setHours(h + 1, 0, 0, 0);
+                        return e.start < tEnd && e.end > t;
+                      });
+                      const allFree = busyMembers.length === 0 && !myBusy;
+                      return (
+                        <td key={di} style={{
+                          padding: 2, textAlign: "center", borderTop: "1px solid var(--border)",
+                          background: myBusy ? "rgba(239,68,68,0.12)" : busyMembers.length > 0 ? "rgba(251,191,36,0.1)" : "transparent"
+                        }}>
+                          {myBusy && <div style={{ width: "100%", height: 18, borderRadius: 4, background: "rgba(239,68,68,0.3)" }} />}
+                          {!myBusy && busyMembers.length > 0 && (
+                            <div className="flex justify-center gap-0.5">
+                              {busyMembers.slice(0, 2).map(m => <Avatar key={m.uid} name={m.name} size={12} />)}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center gap-4 p-3 text-xs" style={{ borderTop: "1px solid var(--border)", color: "var(--inactive)" }}>
+            <div className="flex items-center gap-1.5"><div style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(239,68,68,0.3)" }} /> Toi (occupé)</div>
+            <div className="flex items-center gap-1.5"><div style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(251,191,36,0.15)" }} /> Membres</div>
+            <div className="flex items-center gap-1.5"><div style={{ width: 12, height: 12, borderRadius: 3, background: "var(--card)" }} /> Libre</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
 //  ESPACE — vue principale
 // ================================================================
 function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeChange }) {
@@ -3761,6 +3976,7 @@ function SpaceScreen({ user, userData, space, onBack, currentThemeId, onThemeCha
           {activeTab === "jeux"      && <JeuxTab      spaceId={space.id} user={user} members={members} />}
           {activeTab === "depenses"  && <DepensesTab  spaceId={space.id} user={user} members={members} />}
           {activeTab === "repas"     && <RepasTab     spaceId={space.id} user={user} members={members} />}
+          {activeTab === "calendrier" && <CalendrierTab spaceId={space.id} user={user} members={members} />}
         </>
       )}
 
